@@ -21,6 +21,9 @@ object Texts {
         else -> "Hinterhand"
     }
 
+    /** "1 Stich", "3 Stiche". */
+    fun tricks(count: Int): String = if (count == 1) "1 Stich" else "$count Stiche"
+
     /** What a seat said last in bidding, e.g. "20", "ja" or "passe"; null if nothing yet. */
     fun lastWord(round: Round, seat: Int): String? = round.biddingLog.lastOrNull { it.first == seat }?.second
 
