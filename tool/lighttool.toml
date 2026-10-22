@@ -1,0 +1,11 @@
+[tool]
+id = "io.github.foxskat"
+label = "Skat"
+versionCode = 1
+versionName = "0.1.0"
+# Skat läuft komplett offline, deshalb braucht das Tool keine Berechtigungen.
+permissions = []
+capabilities = []
+# for the LightOS emulator, use the line below and build with -DlightSdk.allowAltServerPackage=true
+# serverPackage = "com.thelightphone.sdk.emulator"
+serverPackage = "com.lightos"
