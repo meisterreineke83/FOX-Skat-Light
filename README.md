@@ -41,8 +41,8 @@ gewinnt der Alleinspieler etwa drei von vier Spielen.
 ## APK bauen lassen
 
 Bei jedem Push auf `main` baut **Actions → „APK bauen“** die App, führt die Tests aus und legt
-unter **Releases** die Datei `FOX-Skat-Light.apk` ab. Für Pull Requests gibt es die APK als
-Artefakt im jeweiligen Actions-Lauf.
+unter **Releases** die Datei `FOX-Skat-Light.apk` ab. Für Pull Requests erscheint sie dort als
+Test-Version „test-pr-…“ und wird bei jedem neuen Push auf den PR ersetzt.
 
 Lokal geht es auch mit Android Studio oder:
 

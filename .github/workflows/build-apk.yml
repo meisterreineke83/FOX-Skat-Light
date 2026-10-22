@@ -58,3 +58,20 @@ jobs:
           body: |
             Automatisch gebaut aus ${{ github.sha }}.
             Installation: siehe README → „Aufs Light Phone bringen“.
+
+      # Pull Requests: APK als Test-Version unter Releases, damit sie ohne Actions-Artefakt
+      # (Zip, nur mit Anmeldung) direkt aufs Telefon geladen werden kann.
+      - name: Als Test-Version veröffentlichen
+        if: github.event_name == 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: test-pr-${{ github.event.pull_request.number }}
+          target_commitish: ${{ github.event.pull_request.head.sha }}
+          name: FOX Skat Light ${{ steps.v.outputs.version }} – Test (PR ${{ github.event.pull_request.number }})
+          prerelease: true
+          make_latest: false
+          files: FOX-Skat-Light.apk
+          body: |
+            Testversion aus Pull Request #${{ github.event.pull_request.number }}, gebaut aus ${{ github.event.pull_request.head.sha }}.
+            Wird bei jedem neuen Push auf den PR ersetzt.
+            Installation: siehe README → „Aufs Light Phone bringen“.
