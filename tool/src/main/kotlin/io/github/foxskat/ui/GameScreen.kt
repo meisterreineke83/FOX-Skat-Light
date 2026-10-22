@@ -159,9 +159,9 @@ class GameScreen(sealedActivity: SealedLightActivity) :
                     .fillMaxWidth()
                     .padding(horizontal = 1f.gridUnitsAsDp()),
             ) {
-                LightText("${Texts.seatName(seat).uppercase()} · ${Texts.position(round, seat)}", LightTextVariant.Copy, maxLines = 1)
+                LightText("${Texts.seatName(seat).uppercase()} · ${Texts.position(round, seat)}", LightTextVariant.Paragraph, maxLines = 1)
                 Spacer(modifier = Modifier.weight(1f))
-                LightText(detail, LightTextVariant.Copy, lighten = seat != round.declarer, maxLines = 1)
+                LightText(detail, LightTextVariant.Paragraph, lighten = seat != round.declarer, maxLines = 1)
             }
             val c = round.contract
             if (c != null && c.ouvert && round.declarer == seat && round.phase == Phase.PLAYING) {
