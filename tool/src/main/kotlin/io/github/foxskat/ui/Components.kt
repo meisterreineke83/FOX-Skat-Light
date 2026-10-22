@@ -43,6 +43,12 @@ const val LIST_ROW_UNITS = 4f
 /** Cards per row in the hand; twelve cards (after picking up the Skat) fill two rows. */
 const val CARDS_PER_ROW = 6
 
+/**
+ * Variation selector that asks for the plain text glyph of a suit symbol instead of the wide
+ * colour emoji, so that "♣10" fits on a card.
+ */
+private const val TEXT_STYLE = "\uFE0E"
+
 /** Height of a card tile in grid units. */
 const val CARD_HEIGHT_UNITS = 4.25f
 
@@ -182,6 +188,7 @@ fun CardTile(
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     dimmed: Boolean = false,
+    variant: LightTextVariant = LightTextVariant.Subheading,
     onClick: (() -> Unit)? = null,
 ) {
     val colors = LightThemeTokens.colors
@@ -196,8 +203,8 @@ fun CardTile(
     ) {
         if (card != null) {
             LightText(
-                text = card.toString(),
-                variant = LightTextVariant.Heading,
+                text = card.suit.symbol + TEXT_STYLE + card.rank.label,
+                variant = variant,
                 align = TextAlign.Center,
                 lighten = dimmed && !selected,
                 color = if (selected) colors.background else null,
@@ -247,6 +254,7 @@ fun TrickSlot(label: String, card: Card?, highlight: Boolean, modifier: Modifier
         CardTile(
             card = card,
             selected = highlight && card != null,
+            variant = LightTextVariant.Heading,
             modifier = Modifier
                 .width(6f.gridUnitsAsDp())
                 .padding(top = 0.25f.gridUnitsAsDp()),
