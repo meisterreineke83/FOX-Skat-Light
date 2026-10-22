@@ -3,6 +3,7 @@ package io.github.foxskat.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.viewModelScope
@@ -10,9 +11,9 @@ import com.thelightphone.sdk.InitialScreen
 import com.thelightphone.sdk.LightScreen
 import com.thelightphone.sdk.LightViewModel
 import com.thelightphone.sdk.SealedLightActivity
-import com.thelightphone.sdk.ui.LightThemeColors
-import com.thelightphone.sdk.ui.LightThemeController
 import io.github.foxskat.core.Phase
+import io.github.foxskat.core.ScoreSheet
+import io.github.foxskat.core.Texts
 import kotlinx.coroutines.launch
 
 class HomeViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit>() {
@@ -26,10 +27,6 @@ class HomeViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit>() 
             prefs.applyTheme()
             Table.ensureLoaded(prefs)
         }
-    }
-
-    fun toggleTheme() {
-        viewModelScope.launch { prefs.toggleTheme() }
     }
 }
 
@@ -45,11 +42,17 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
     @Composable
     override fun Content() {
         val sheet by viewModel.sheet.collectAsState()
-        viewModel.version.collectAsState().value
-        val colors by LightThemeController.colors.collectAsState()
-        val isDark = colors == LightThemeColors.Dark
+        val version by viewModel.version.collectAsState()
         val running = Table.round?.let { it.phase != Phase.FINISHED && it.phase != Phase.PASSED_IN } == true
 
+        // Names and the running game live outside Compose state; rebuild when they change.
+        key(version) {
+            Menu(running, sheet)
+        }
+    }
+
+    @Composable
+    private fun Menu(running: Boolean, sheet: ScoreSheet) {
         ToolScaffold(title = "Skat", onBack = null) {
             MenuItem(if (running) "WEITERSPIELEN" else "SPIELEN") {
                 navigateTo(::GameScreen)
@@ -57,10 +60,13 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
             MenuItem("LISTE", value = if (sheet.entries.isEmpty()) null else "${sheet.total(Table.HUMAN)}") {
                 navigateTo(::ScoreScreen)
             }
-            MenuItem("ANZEIGE", value = if (isDark) "DUNKEL" else "HELL") {
-                viewModel.toggleTheme()
+            MenuItem("ANZEIGE") {
+                navigateTo(::SettingsScreen)
             }
-            HintText("Du spielst gegen zwei Computergegner, Links und Rechts. Tippe eine Karte an und tippe noch einmal, um sie zu spielen.")
+            HintText(
+                "Du spielst gegen ${Texts.seatName(1)} (links) und ${Texts.seatName(2)} (rechts). " +
+                    "Tippe eine Karte an und tippe noch einmal, um sie zu spielen."
+            )
         }
     }
 }

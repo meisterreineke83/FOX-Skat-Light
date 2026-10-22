@@ -3,10 +3,16 @@ package io.github.foxskat.core
 /** German texts for the table; seat 0 is the person holding the phone. */
 object Texts {
 
+    const val DEFAULT_LEFT = "Marc"
+    const val DEFAULT_RIGHT = "Martin"
+
+    /** Names of the computer players to the left (seat 1) and right (seat 2). */
+    var names: Pair<String, String> = DEFAULT_LEFT to DEFAULT_RIGHT
+
     fun seatName(seat: Int): String = when (seat) {
         0 -> "Du"
-        1 -> "Links"
-        else -> "Rechts"
+        1 -> names.first
+        else -> names.second
     }
 
     fun position(round: Round, seat: Int): String = when (seat) {
@@ -24,9 +30,13 @@ object Texts {
         return when (round.phase) {
             Phase.BIDDING -> when {
                 active != human -> "${seatName(active!!)} ${if (round.awaitingAnswer) "überlegt" else "reizt"} …"
-                round.vorhandAlone -> "Beide haben gepasst. Spielst du für 18?"
+                round.vorhandAlone -> "Beide haben gepasst. Spielst du für 18? Sonst wird Ramsch gespielt."
                 round.awaitingAnswer -> "${seatName(round.bidder)} sagt ${round.bid}. Hältst du?"
-                else -> if (round.bid == 0) "Du sagst zuerst." else "Du sagst weiter: ${Contract.nextBid(round.bid)}?"
+                else -> if (round.bid == 0) {
+                    "Du bist ${position(round, human)} und sagst zuerst."
+                } else {
+                    "Du sagst weiter: ${Contract.nextBid(round.bid)}?"
+                }
             }
             Phase.SKAT_DECISION -> if (round.declarer == human) {
                 "Du spielst für ${round.bid}. Skat aufnehmen oder Hand?"
@@ -46,6 +56,7 @@ object Texts {
     }
 
     fun result(round: Round, human: Int = 0): String {
+        round.ramschResult?.let { return ramschResult(it) }
         val s = round.settlement ?: return ""
         val who = if (round.declarer == human) "Du hast" else "${seatName(round.declarer)} hat"
         val verdict = if (s.won) "gewonnen" else "verloren"
@@ -58,14 +69,40 @@ object Texts {
         return "$who ${round.contract!!.name}$points $verdict$extra: $sign${s.score}."
     }
 
-    /** Short description of the game for the top bar. */
-    fun gameLine(round: Round): String? {
+    private fun ramschResult(r: RamschResult): String {
+        val d = r.durchmarsch
+        if (d != null) return "Ramsch: ${if (d == 0) "Du hast" else "${seatName(d)} hat"} alle Stiche, Durchmarsch: +120."
+        val names = r.losers.map(::seatName)
+        val who = when {
+            names.size == 1 && r.losers[0] == 0 -> "Du verlierst"
+            names.size == 1 -> "${names[0]} verliert"
+            else -> names.joinToString(" und ") + " verlieren"
+        }
+        val jungfrau = if (r.jungfrauen.isEmpty()) "" else " (Jungfrau: ${r.jungfrauen.joinToString(", ") { seatName(it) }})"
+        return "Ramsch: $who mit ${r.points[r.losers[0]]} Augen$jungfrau: ${r.scores[r.losers[0]]}."
+    }
+
+    /** Game in large letters for the top bar, e.g. "♥ HERZ HAND", "REIZEN" or "RAMSCH". */
+    fun gameTitle(round: Round): String {
         val c = round.contract
         return when {
-            c != null -> "${c.name} · ${seatName(round.declarer)} · ${round.bid}"
-            round.phase == Phase.BIDDING && round.bid > 0 -> "Gereizt: ${round.bid}"
-            round.declarer >= 0 -> "${seatName(round.declarer)} spielt · ${round.bid}"
-            else -> null
+            round.isRamsch -> "RAMSCH"
+            c != null && c.kind == GameKind.FARBE -> "${c.trump!!.symbol} ${c.name.uppercase()}"
+            c != null -> c.name.uppercase()
+            round.phase == Phase.BIDDING -> "REIZEN"
+            else -> "SKAT"
         }
+    }
+
+    /** Who plays and how far was bid, e.g. "Marc spielt · gereizt bis 20". */
+    fun gameLine(round: Round): String? = when {
+        round.isRamsch -> "Alle gepasst · wer die meisten Augen hat, verliert"
+        round.declarer >= 0 -> {
+            val who = if (round.declarer == 0) "Du spielst" else "${seatName(round.declarer)} spielt"
+            "$who · gereizt bis ${round.bid}"
+        }
+        round.phase == Phase.BIDDING && round.bid > 0 -> "Gereizt: ${round.bid}"
+        round.phase == Phase.BIDDING -> "Noch nichts gesagt"
+        else -> null
     }
 }

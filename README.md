@@ -3,10 +3,14 @@ Skat auf dem Light Phone III – offline gegen zwei Computergegner.
 
 ## Was es kann
 
-- **Ein Spieler gegen zwei Computergegner** („Links“ und „Rechts“), nach den Regeln der
+- **Ein Spieler gegen zwei Computergegner** (Marc links, Martin rechts; die Namen lassen sich
+  unter `ANZEIGE` ändern), nach den Regeln der
   Internationalen Skatordnung. Geber, Vorhand, Mittelhand und Hinterhand wechseln jede Runde.
 - **Reizen:** Mittelhand sagt, Vorhand hört, danach Hinterhand. Unten tippst du `PASSE`, `JA` oder den
   nächsten Reizwert. Haben beide anderen gepasst, kannst du als Vorhand für 18 spielen.
+- **Ramsch**, wenn alle passen: Buben sind Trumpf, jeder spielt für sich, der Skat geht an den
+  letzten Stich. Wer die meisten Augen hat, verliert sie. Jede Jungfrau (kein Stich) verdoppelt,
+  ein Durchmarsch (alle Stiche) bringt +120.
 - **Skat:** aufnehmen und zwei Karten drücken, oder Hand spielen.
 - **Spiele:** Kreuz, Pik, Herz, Karo, Grand, Null und Null Ouvert. Bei Handspielen kannst du
   Schneider, Schwarz oder Ouvert ansagen. Beim Ansagen steht neben jedem Spiel sein Wert.
@@ -15,10 +19,10 @@ Skat auf dem Light Phone III – offline gegen zwei Computergegner.
   der nächste beginnt.
 - **Abrechnung:** Spitzen (mit/ohne), Hand, Schneider, Schwarz, Ansagen, Ouvert und Überreizen.
   Gewonnen zählt der Spielwert, verloren das Doppelte als Minus.
-- **Liste** mit allen Spielen und den Summen für dich, Links und Rechts. Sie bleibt gespeichert.
-- Hell/Dunkel umschaltbar.
+- **Liste** mit allen Spielen und dem Zwischenstand oben. Sie bleibt gespeichert.
+- Unter `ANZEIGE`: Hell/Dunkel und die Namen der beiden Computergegner.
 
-Noch nicht dabei: Kontra/Re, Ramsch, Bockrunden, Seeger-Fabian-Wertung. Ein laufendes Spiel
+Noch nicht dabei: Kontra/Re, Schieben im Ramsch, Bockrunden, Seeger-Fabian-Wertung. Ein laufendes Spiel
 geht verloren, wenn das Tool beendet wird; die Liste bleibt.
 
 ## Die Computergegner

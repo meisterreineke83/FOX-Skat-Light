@@ -167,7 +167,11 @@ object Ai {
         val legal = round.legalCards(seat)
         if (legal.size == 1) return legal.single()
         val k = Knowledge(round, seat)
-        return if (round.contract!!.kind == GameKind.NULL) playNull(k, legal) else playTrumpGame(k, legal)
+        return when {
+            round.isRamsch -> playRamsch(round.contract!!, round.currentTrick, legal)
+            round.contract!!.kind == GameKind.NULL -> playNull(k, legal)
+            else -> playTrumpGame(k, legal)
+        }
     }
 
     /** What [seat] can know about the cards it does not see. */
@@ -318,6 +322,24 @@ object Ai {
             }
             declarerStillToPlay -> legal.minBy { c.strength(it) }
             else -> legal.maxBy { c.strength(it) }
+        }
+    }
+
+    /**
+     * Ramsch: take as few points as possible. Stay under the winning card and drop high
+     * cards there; lead low cards; when a trick cannot be avoided, take it cheaply.
+     */
+    private fun playRamsch(c: Contract, trick: List<Card>, legal: List<Card>): Card {
+        if (trick.isEmpty()) {
+            return legal.minWith(compareBy<Card> { c.isTrump(it) }.thenBy { c.strength(it) }.thenBy { it.points })
+        }
+        val winning = trick[c.trickWinnerIndex(trick)]
+        val under = legal.filter { !c.beats(it, winning) }
+        if (under.isNotEmpty()) return under.maxWith(compareBy<Card> { it.points }.thenBy { c.strength(it) })
+        return if (trick.size == 2) {
+            legal.minWith(compareBy<Card> { it.points }.thenBy { c.strength(it) })
+        } else {
+            legal.minWith(compareBy<Card> { c.strength(it) }.thenBy { it.points })
         }
     }
 

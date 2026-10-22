@@ -12,6 +12,7 @@ import io.github.foxskat.core.Phase
 import io.github.foxskat.core.Round
 import io.github.foxskat.core.ScoreSheet
 import io.github.foxskat.core.Suit
+import io.github.foxskat.core.Texts
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.sync.withLock
  */
 object Table {
     const val HUMAN = 0
+    private const val MAX_NAME_LENGTH = 12
 
     private val _version = MutableStateFlow(0)
 
@@ -46,6 +48,7 @@ object Table {
     suspend fun ensureLoaded(prefs: Prefs) = loadLock.withLock {
         if (!loaded) {
             _sheet.value = prefs.loadSheet()
+            Texts.names = prefs.loadNames()
             loaded = true
         }
     }
@@ -63,6 +66,15 @@ object Table {
         recorded = true
         _sheet.value = _sheet.value.add(r)
         prefs.saveSheet(_sheet.value)
+        changed()
+    }
+
+    /** Renames a computer player; empty input keeps the old name. */
+    suspend fun rename(prefs: Prefs, seat: Int, name: String) {
+        val clean = name.trim().take(MAX_NAME_LENGTH)
+        if (clean.isEmpty()) return
+        Texts.names = if (seat == 1) clean to Texts.names.second else Texts.names.first to clean
+        prefs.saveName(seat, clean)
         changed()
     }
 

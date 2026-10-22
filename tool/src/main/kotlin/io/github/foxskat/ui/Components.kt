@@ -43,6 +43,9 @@ const val LIST_ROW_UNITS = 4f
 /** Cards per row in the hand; twelve cards (after picking up the Skat) fill two rows. */
 const val CARDS_PER_ROW = 6
 
+/** Height of a card tile in grid units. */
+const val CARD_HEIGHT_UNITS = 4.25f
+
 /**
  * Common frame for every screen: Light theme, top bar with back button,
  * content area and an optional bottom bar.
@@ -146,6 +149,18 @@ fun MenuItem(label: String, value: String? = null, enabled: Boolean = true, onCl
     }
 }
 
+/** Thin full-width line to separate sections. */
+@Composable
+fun Divider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 1f.gridUnitsAsDp(), vertical = 0.5f.gridUnitsAsDp())
+            .height(1.dp)
+            .background(LightThemeTokens.colors.content),
+    )
+}
+
 /** Lighter explanatory text. */
 @Composable
 fun HintText(text: String) {
@@ -173,7 +188,7 @@ fun CardTile(
     val frame = if (dimmed) colors.contentSecondary else colors.content
     Box(
         modifier = modifier
-            .height(3.5f.gridUnitsAsDp())
+            .height(CARD_HEIGHT_UNITS.gridUnitsAsDp())
             .let { if (card != null) it.border(1.dp, frame) else it }
             .background(if (selected) colors.content else colors.background)
             .let { if (onClick != null) it.lightClickable(onClick = onClick) else it },
@@ -182,7 +197,7 @@ fun CardTile(
         if (card != null) {
             LightText(
                 text = card.toString(),
-                variant = LightTextVariant.Copy,
+                variant = LightTextVariant.Heading,
                 align = TextAlign.Center,
                 lighten = dimmed && !selected,
                 color = if (selected) colors.background else null,
@@ -228,12 +243,12 @@ fun HandView(
 @Composable
 fun TrickSlot(label: String, card: Card?, highlight: Boolean, modifier: Modifier = Modifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        LightText(text = label, variant = LightTextVariant.Detail, lighten = !highlight, maxLines = 1)
+        LightText(text = label, variant = LightTextVariant.Copy, lighten = !highlight, maxLines = 1)
         CardTile(
             card = card,
             selected = highlight && card != null,
             modifier = Modifier
-                .width(5f.gridUnitsAsDp())
+                .width(6f.gridUnitsAsDp())
                 .padding(top = 0.25f.gridUnitsAsDp()),
         )
     }

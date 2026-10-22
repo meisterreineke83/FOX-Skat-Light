@@ -33,13 +33,43 @@ class RoundTest {
     }
 
     @Test
-    fun allPassIsPassedIn() {
+    fun allPassIsRamsch() {
         val r = Round(dealer = 2, deck = deck(2))
         r.pass(r.mittelhand)
         r.pass(r.hinterhand)
         assertTrue(r.vorhandAlone)
         r.pass(r.vorhand)
-        assertEquals(Phase.PASSED_IN, r.phase)
+        assertTrue(r.isRamsch)
+        assertEquals(Phase.PLAYING, r.phase)
+        assertEquals(r.vorhand, r.activeSeat)
+        while (r.phase == Phase.PLAYING) Ai.act(r, r.activeSeat!!)
+        val result = assertNotNull(r.ramschResult)
+        assertEquals(120, result.points.sum(), "Skat geht an den letzten Stich")
+        val sheet = ScoreSheet().add(r)
+        assertTrue(sheet.entries.single().game.startsWith("Ramsch"))
+    }
+
+    @Test
+    fun ramschScoring() {
+        val plain = RamschResult.of(points = listOf(50, 40, 30), tricks = listOf(4, 3, 3))
+        assertEquals(listOf(-50, 0, 0), plain.scores)
+        val jungfrau = RamschResult.of(points = listOf(70, 50, 0), tricks = listOf(6, 4, 0))
+        assertEquals(listOf(-140, 0, 0), jungfrau.scores)
+        val tie = RamschResult.of(points = listOf(45, 45, 30), tricks = listOf(4, 3, 3))
+        assertEquals(listOf(0, 1), tie.losers)
+        val durchmarsch = RamschResult.of(points = listOf(120, 0, 0), tricks = listOf(10, 0, 0))
+        assertEquals(listOf(120, 0, 0), durchmarsch.scores)
+    }
+
+    @Test
+    fun tiedRamschLosersBothScore() {
+        val entry = ScoreEntry(4, 0, "Ramsch", 0, false, -45, 45, alsoSeats = listOf(1))
+        val sheet = ScoreSheet(listOf(entry))
+        assertEquals(-45, sheet.total(0))
+        assertEquals(-45, sheet.total(1))
+        assertEquals(sheet, ScoreSheet.decode(sheet.encode()))
+        // Lists saved by version 0.1 have seven fields.
+        assertEquals(ScoreEntry(1, 2, "Herz", 18, true, 20, 70), ScoreEntry.decode("1|2|Herz|18|true|20|70"))
     }
 
     @Test
@@ -103,6 +133,7 @@ class RoundTest {
         var sheet = ScoreSheet()
         val kinds = mutableMapOf<GameKind, Int>()
         var won = 0
+        var ramsch = 0
         repeat(1000) { i ->
             val r = Round(dealer = sheet.nextDealer, deck = deck(1000 + i))
             var steps = 0
@@ -110,7 +141,10 @@ class RoundTest {
                 assertTrue(Ai.act(r, r.activeSeat!!))
                 assertTrue(++steps < 200, "Runde endet nicht")
             }
-            if (r.phase == Phase.FINISHED) {
+            if (r.isRamsch) {
+                ramsch++
+                assertEquals(120, (0..2).sumOf { r.pointsOf(it) })
+            } else if (r.phase == Phase.FINISHED) {
                 val c = r.contract!!
                 kinds.merge(c.kind, 1, Int::plus)
                 if (r.settlement!!.won) won++
@@ -122,7 +156,8 @@ class RoundTest {
             sheet = sheet.add(r)
         }
         val played = kinds.values.sum()
-        println("Spiele: $played von 1000, gewonnen: $won, Arten: $kinds")
+        println("Spiele: $played von 1000, gewonnen: $won, Arten: $kinds, Ramsch: $ramsch")
+        assertEquals(1000, played + ramsch)
         assertTrue(played > 600, "Computer sollte meistens spielen, nicht einpassen: $played")
         assertTrue(won > played * 0.5, "Alleinspieler sollte meist gewinnen: $won/$played")
     }
@@ -133,9 +168,9 @@ class TextsTest {
     fun statusAndResultReadNaturally() {
         val r = Round(dealer = 1, deck = Card.DECK.shuffled(Random(9)))
         // Dealer 1: Vorhand 2, Mittelhand 0 (you) says first.
-        assertEquals("Du sagst zuerst.", Texts.status(r))
+        assertEquals("Du bist Mittelhand und sagst zuerst.", Texts.status(r))
         r.say(0, 18)
-        assertEquals("Rechts überlegt …", Texts.status(r))
+        assertEquals("Martin überlegt …", Texts.status(r))
         r.answer(2, hold = false)
         r.pass(1)
         r.pickUpSkat(0)

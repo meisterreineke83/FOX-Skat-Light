@@ -210,3 +210,30 @@ object Scoring {
         return Settlement(won, value, if (won) value else -2 * value, declarerPoints, schneider, schwarz, overbid, spitzen, mit)
     }
 }
+
+/**
+ * Outcome of a Ramsch: the player with the most points loses them. Every player without a
+ * trick ("Jungfrau") doubles the loss; taking all tricks ("Durchmarsch") wins 120.
+ */
+data class RamschResult(
+    val points: List<Int>,
+    val losers: List<Int>,
+    val jungfrauen: List<Int>,
+    val durchmarsch: Int?,
+    /** Score change per seat. */
+    val scores: List<Int>,
+) {
+    companion object {
+        fun of(points: List<Int>, tricks: List<Int>): RamschResult {
+            val durchmarsch = tricks.indexOfFirst { it == 10 }.takeIf { it >= 0 }
+            if (durchmarsch != null) {
+                return RamschResult(points, emptyList(), emptyList(), durchmarsch, List(3) { if (it == durchmarsch) 120 else 0 })
+            }
+            val max = points.max()
+            val losers = (0..2).filter { points[it] == max }
+            val jungfrauen = (0..2).filter { tricks[it] == 0 }
+            val loss = max shl jungfrauen.size
+            return RamschResult(points, losers, jungfrauen, null, List(3) { if (it in losers) -loss else 0 })
+        }
+    }
+}

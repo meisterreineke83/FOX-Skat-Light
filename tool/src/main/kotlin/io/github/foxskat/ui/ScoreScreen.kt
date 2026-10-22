@@ -1,11 +1,13 @@
 package io.github.foxskat.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -69,15 +71,16 @@ class ScoreScreen(sealedActivity: SealedLightActivity) :
                 onClick = viewModel::clear,
             ),
         ) {
+            // Standings, set apart from the games below by a line.
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 1f.gridUnitsAsDp())) {
                 for (seat in 0..2) {
-                    LightText(
-                        "${Texts.seatName(seat).uppercase()} ${sheet.total(seat)}",
-                        LightTextVariant.Copy,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        LightText(Texts.seatName(seat).uppercase(), LightTextVariant.Detail, lighten = true, maxLines = 1)
+                        LightText("${sheet.total(seat)}", LightTextVariant.Heading, maxLines = 1)
+                    }
                 }
             }
+            Divider()
             if (sheet.entries.isEmpty()) {
                 HintText("Noch keine Spiele. Gezählt wird wie auf dem Skatblock: gewonnen +Spielwert, verloren −2 × Spielwert.")
             }
@@ -86,10 +89,15 @@ class ScoreScreen(sealedActivity: SealedLightActivity) :
                     if (e.passedIn) {
                         TwoLineRow(title = "${e.number}. Eingepasst", detail = null)
                     } else {
-                        val result = if (e.won) "gewonnen" else "verloren"
+                        val who = e.seats.joinToString(" und ") { Texts.seatName(it) }
+                        val detail = if (e.game.startsWith("Ramsch")) {
+                            "${e.declarerPoints} Augen"
+                        } else {
+                            "gereizt ${e.bid} · ${if (e.won) "gewonnen" else "verloren"} · ${e.declarerPoints} Augen"
+                        }
                         TwoLineRow(
-                            title = "${e.number}. ${Texts.seatName(e.declarer)} · ${e.game}",
-                            detail = "gereizt ${e.bid} · $result · ${e.declarerPoints} Augen",
+                            title = "${e.number}. $who · ${e.game}",
+                            detail = detail,
                             trailing = if (e.score > 0) "+${e.score}" else "${e.score}",
                         )
                     }

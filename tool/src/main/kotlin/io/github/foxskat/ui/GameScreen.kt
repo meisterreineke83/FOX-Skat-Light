@@ -12,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import com.thelightphone.sdk.LightScreen
 import com.thelightphone.sdk.SealedLightActivity
 import com.thelightphone.sdk.ui.LightBarButton
@@ -53,8 +54,7 @@ class GameScreen(sealedActivity: SealedLightActivity) :
     @Composable
     private fun GameTable(round: Round?, selected: Set<Card>, announcement: Announcement) {
         ToolScaffold(
-            title = "Skat",
-            subtitle = round?.let { Texts.gameLine(it) },
+            title = round?.let { Texts.gameTitle(it) } ?: "SKAT",
             onBack = { goBack() },
             bottomBar = if (round == null) {
                 listOf(LightBarButton.Text("NEUES SPIEL", onClick = viewModel::nextRound))
@@ -67,21 +67,34 @@ class GameScreen(sealedActivity: SealedLightActivity) :
                 return@ToolScaffold
             }
             val myTurnToDeclare = round.phase == Phase.DECLARE && round.declarer == Table.HUMAN
-            Opponents(round)
-            if (myTurnToDeclare) {
-                DeclareChoices(round, announcement)
-            } else {
-                TrickArea(round)
+            val over = round.phase == Phase.FINISHED || round.phase == Phase.PASSED_IN
+            // Who plays and how far was bid, set apart from the table by a line.
+            Texts.gameLine(round)?.let {
                 LightText(
-                    text = Texts.status(round),
+                    text = it,
                     variant = LightTextVariant.Copy,
-                    modifier = Modifier.padding(horizontal = 1f.gridUnitsAsDp(), vertical = 0.5f.gridUnitsAsDp()),
+                    align = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 1f.gridUnitsAsDp()),
                 )
-                if (round.phase == Phase.FINISHED || round.phase == Phase.PASSED_IN) {
-                    HintText("Skat: ${round.initialSkat.joinToString(" ")}" +
-                        if (round.pickedUpSkat) " · gedrückt: ${round.skat.joinToString(" ")}" else "")
+            }
+            Divider()
+            // This part gives way first if space runs short, so the hand always stays visible.
+            Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Opponents(round)
+                if (myTurnToDeclare) {
+                    DeclareChoices(round, announcement)
+                } else {
+                    if (!over) TrickArea(round)
+                    LightText(
+                        text = Texts.status(round),
+                        variant = LightTextVariant.Copy,
+                        modifier = Modifier.padding(horizontal = 1f.gridUnitsAsDp(), vertical = 0.5f.gridUnitsAsDp()),
+                    )
+                    if (over && round.contract != null) {
+                        HintText("Skat: ${round.initialSkat.joinToString(" ")}" +
+                            if (round.pickedUpSkat) " · gedrückt: ${round.skat.joinToString(" ")}" else "")
+                    }
                 }
-                Spacer(modifier = Modifier.weight(1f))
             }
             val hand = CardOrder.sort(round.hand(Table.HUMAN), round.contract)
             val legal = round.legalCards(Table.HUMAN).toSet()
@@ -99,7 +112,7 @@ class GameScreen(sealedActivity: SealedLightActivity) :
         return when (round.phase) {
             Phase.BIDDING -> if (!mine) null else when {
                 round.vorhandAlone -> listOf(
-                    LightBarButton.Text("PASSE", onClick = viewModel::pass),
+                    LightBarButton.Text("RAMSCH", onClick = viewModel::pass),
                     LightBarButton.Text("18 SPIELEN", onClick = viewModel::playFor18),
                 )
                 round.awaitingAnswer -> listOf(
@@ -136,7 +149,7 @@ class GameScreen(sealedActivity: SealedLightActivity) :
             val detail = when (round.phase) {
                 Phase.BIDDING, Phase.PASSED_IN -> Texts.lastWord(round, seat) ?: ""
                 else -> when (seat) {
-                    round.declarer -> "spielt · ${round.tricksOf(seat).size} Stiche"
+                    round.declarer -> "SPIELT · ${round.tricksOf(seat).size} Stiche"
                     else -> "${round.tricksOf(seat).size} Stiche"
                 }
             }
@@ -145,9 +158,9 @@ class GameScreen(sealedActivity: SealedLightActivity) :
                     .fillMaxWidth()
                     .padding(horizontal = 1f.gridUnitsAsDp()),
             ) {
-                LightText("${Texts.seatName(seat).uppercase()} · ${Texts.position(round, seat)}", LightTextVariant.Detail)
+                LightText("${Texts.seatName(seat).uppercase()} · ${Texts.position(round, seat)}", LightTextVariant.Copy, maxLines = 1)
                 Spacer(modifier = Modifier.weight(1f))
-                LightText(detail, LightTextVariant.Detail, lighten = true)
+                LightText(detail, LightTextVariant.Copy, lighten = seat != round.declarer, maxLines = 1)
             }
             val c = round.contract
             if (c != null && c.ouvert && round.declarer == seat && round.phase == Phase.PLAYING) {
@@ -157,15 +170,6 @@ class GameScreen(sealedActivity: SealedLightActivity) :
                     modifier = Modifier.padding(horizontal = 1f.gridUnitsAsDp()),
                 )
             }
-        }
-        val me = when (round.phase) {
-            Phase.BIDDING, Phase.PASSED_IN -> Texts.lastWord(round, Table.HUMAN) ?: ""
-            else -> "${round.tricksOf(Table.HUMAN).size} Stiche"
-        }
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 1f.gridUnitsAsDp())) {
-            LightText("DU · ${Texts.position(round, Table.HUMAN)}", LightTextVariant.Detail)
-            Spacer(modifier = Modifier.weight(1f))
-            LightText(me, LightTextVariant.Detail, lighten = true)
         }
     }
 
@@ -181,7 +185,7 @@ class GameScreen(sealedActivity: SealedLightActivity) :
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 1f.gridUnitsAsDp()),
+                .padding(vertical = 0.5f.gridUnitsAsDp()),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             for (i in 0 until 3) {

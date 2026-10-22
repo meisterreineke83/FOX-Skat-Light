@@ -95,7 +95,7 @@ class Round(val dealer: Int, deck: List<Card>) {
         check(phase == Phase.BIDDING && seat == activeSeat) { "Nicht am Zug" }
         if (biddingStage == 3) {
             biddingLog += seat to "passe"
-            phase = Phase.PASSED_IN
+            startRamsch()
             return
         }
         if (awaitingAnswer) {
@@ -125,6 +125,22 @@ class Round(val dealer: Int, deck: List<Card>) {
             startDeclaring(winner)
         }
     }
+
+    // --- Ramsch -----------------------------------------------------------------------------
+
+    /** True if all three passed: everyone plays alone, jacks are trump, fewest points wins. */
+    var isRamsch: Boolean = false
+        private set
+
+    private fun startRamsch() {
+        isRamsch = true
+        contract = Contract(GameKind.GRAND)
+        phase = Phase.PLAYING
+        trickLeader = vorhand
+    }
+
+    var ramschResult: RamschResult? = null
+        private set
 
     // --- Skat and declaring ----------------------------------------------------------------
 
@@ -230,7 +246,8 @@ class Round(val dealer: Int, deck: List<Card>) {
 
     fun pointsOf(seat: Int): Int {
         val trickPoints = tricksOf(seat).sumOf { it.cards.points() }
-        return if (seat == declarer) trickPoints + skatCards.points() else trickPoints
+        val getsSkat = if (isRamsch) tricks.size == 10 && tricks.last().winner == seat else seat == declarer
+        return if (getsSkat) trickPoints + skatCards.points() else trickPoints
     }
 
     /** Card points of both opponents together. */
@@ -241,6 +258,10 @@ class Round(val dealer: Int, deck: List<Card>) {
 
     private fun finish() {
         phase = Phase.FINISHED
+        if (isRamsch) {
+            ramschResult = RamschResult.of(points = (0..2).map(::pointsOf), tricks = (0..2).map { tricksOf(it).size })
+            return
+        }
         settlement = Scoring.settle(
             contract = contract!!,
             bid = bid,
