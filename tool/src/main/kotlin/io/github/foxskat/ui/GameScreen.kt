@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import com.thelightphone.sdk.LightScreen
 import com.thelightphone.sdk.SealedLightActivity
@@ -19,6 +20,7 @@ import com.thelightphone.sdk.ui.LightScrollView
 import com.thelightphone.sdk.ui.LightText
 import com.thelightphone.sdk.ui.LightTextVariant
 import com.thelightphone.sdk.ui.gridUnitsAsDp
+import io.github.foxskat.core.Card
 import io.github.foxskat.core.CardOrder
 import io.github.foxskat.core.Contract
 import io.github.foxskat.core.GameKind
@@ -36,12 +38,20 @@ class GameScreen(sealedActivity: SealedLightActivity) :
 
     @Composable
     override fun Content() {
-        // Reading the version makes this recompose after every move of the mutable round.
-        viewModel.version.collectAsState().value
+        val version by viewModel.version.collectAsState()
         val selected by viewModel.selected.collectAsState()
         val announcement by viewModel.announcement.collectAsState()
         val round = viewModel.round
 
+        // The round is one mutable object, so Compose would skip every part that only gets
+        // the same Round instance. Keying on the version rebuilds the table after each move.
+        key(version) {
+            GameTable(round, selected, announcement)
+        }
+    }
+
+    @Composable
+    private fun GameTable(round: Round?, selected: Set<Card>, announcement: Announcement) {
         ToolScaffold(
             title = "Skat",
             subtitle = round?.let { Texts.gameLine(it) },
