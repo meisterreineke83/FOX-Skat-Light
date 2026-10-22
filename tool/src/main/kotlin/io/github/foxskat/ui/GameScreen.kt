@@ -80,7 +80,7 @@ class GameScreen(sealedActivity: SealedLightActivity) :
             Divider()
             // This part gives way first if space runs short, so the hand always stays visible.
             Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                Opponents(round)
+                Players(round)
                 if (myTurnToDeclare) {
                     DeclareChoices(round, announcement)
                 } else {
@@ -142,15 +142,16 @@ class GameScreen(sealedActivity: SealedLightActivity) :
         }
     }
 
-    /** One line per computer player: position, last bid word or tricks, open cards when ouvert. */
+    /** One line per player, the person last: position, last bid word or tricks, open cards when ouvert. */
     @Composable
-    private fun Opponents(round: Round) {
-        for (seat in listOf(1, 2)) {
+    private fun Players(round: Round) {
+        for (seat in listOf(1, 2, Table.HUMAN)) {
+            val tricks = Texts.tricks(round.tricksOf(seat).size)
             val detail = when (round.phase) {
                 Phase.BIDDING, Phase.PASSED_IN -> Texts.lastWord(round, seat) ?: ""
                 else -> when (seat) {
-                    round.declarer -> "SPIELT · ${round.tricksOf(seat).size} Stiche"
-                    else -> "${round.tricksOf(seat).size} Stiche"
+                    round.declarer -> "SPIELT · $tricks"
+                    else -> tricks
                 }
             }
             Row(
@@ -158,9 +159,9 @@ class GameScreen(sealedActivity: SealedLightActivity) :
                     .fillMaxWidth()
                     .padding(horizontal = 1f.gridUnitsAsDp()),
             ) {
-                LightText("${Texts.seatName(seat).uppercase()} · ${Texts.position(round, seat)}", LightTextVariant.Copy, maxLines = 1)
+                LightText("${Texts.seatName(seat).uppercase()} · ${Texts.position(round, seat)}", LightTextVariant.Paragraph, maxLines = 1)
                 Spacer(modifier = Modifier.weight(1f))
-                LightText(detail, LightTextVariant.Copy, lighten = seat != round.declarer, maxLines = 1)
+                LightText(detail, LightTextVariant.Paragraph, lighten = seat != round.declarer, maxLines = 1)
             }
             val c = round.contract
             if (c != null && c.ouvert && round.declarer == seat && round.phase == Phase.PLAYING) {

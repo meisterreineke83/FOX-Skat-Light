@@ -165,6 +165,13 @@ class RoundTest {
 
 class TextsTest {
     @Test
+    fun trickCountUsesSingular() {
+        assertEquals("0 Stiche", Texts.tricks(0))
+        assertEquals("1 Stich", Texts.tricks(1))
+        assertEquals("7 Stiche", Texts.tricks(7))
+    }
+
+    @Test
     fun statusAndResultReadNaturally() {
         val r = Round(dealer = 1, deck = Card.DECK.shuffled(Random(9)))
         // Dealer 1: Vorhand 2, Mittelhand 0 (you) says first.

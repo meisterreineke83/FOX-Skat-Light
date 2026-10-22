@@ -50,7 +50,7 @@ const val CARDS_PER_ROW = 6
 private const val TEXT_STYLE = "\uFE0E"
 
 /** Height of a card tile in grid units. */
-const val CARD_HEIGHT_UNITS = 4.25f
+const val CARD_HEIGHT_UNITS = 5f
 
 /**
  * Common frame for every screen: Light theme, top bar with back button,
