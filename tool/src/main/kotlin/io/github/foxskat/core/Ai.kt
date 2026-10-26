@@ -77,7 +77,9 @@ object Ai {
     }
 
     /** Added to every margin in bidding: above 0 the computer bids more boldly. */
-    var boldness = 0.0
+    var boldness = DEFAULT_BOLDNESS
+
+    const val DEFAULT_BOLDNESS = 0.4
 
     /** Highest value this seat is willing to bid with its ten cards; 0 means pass. */
     fun maxBid(hand: Collection<Card>, vorhand: Boolean): Int {
@@ -167,7 +169,9 @@ object Ai {
     // --- Kontra and Re ----------------------------------------------------------------------
 
     /** Defender hand strength at or above which the computer gives Kontra. */
-    var kontraThreshold = 5.0
+    var kontraThreshold = DEFAULT_KONTRA_THRESHOLD
+
+    const val DEFAULT_KONTRA_THRESHOLD = 5.0
 
     /** Margin of the declarer's game at or above which the computer answers with Re. */
     var reMargin = 2.5
@@ -206,9 +210,13 @@ object Ai {
 
     // --- Card play -------------------------------------------------------------------------
 
+    /** Think ahead over guessed deals ([Lookahead]) instead of using the rules of thumb alone. */
+    var lookahead = true
+
     fun chooseCard(round: Round, seat: Int): Card {
         val legal = round.legalCards(seat)
         if (legal.size == 1) return legal.single()
+        if (lookahead && !round.isRamsch) return Lookahead.chooseCard(round, seat, legal)
         val k = Knowledge(round, seat)
         return when {
             round.isRamsch -> playRamsch(round.contract!!, round.currentTrick, legal)

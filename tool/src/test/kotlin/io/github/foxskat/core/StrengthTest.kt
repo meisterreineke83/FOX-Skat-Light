@@ -40,13 +40,13 @@ class StrengthTest {
 
     @Test
     fun newComputerBeatsOldOne() {
-        System.getenv("BOLD")?.let { Ai.boldness = it.toDouble() }
-        System.getenv("KT")?.let { Ai.kontraThreshold = it.toDouble() }
-        val deals = 1500
+        Lookahead.random = Random(5)
+        val deals = 300
         var gain = 0.0
         for (seat in 0..2) gain += play(deals, seat, newSeat = seat) - play(deals, seat, newSeat = null)
         val perGame = gain / (3 * 3 * deals)
         println("Neuer Computer gegen alten: %+.2f Punkte je Spiel".format(perGame))
-        assertTrue(perGame > -0.5, "Neuer Computer spielt schwächer als der alte: $perGame")
+        // Over 1500 deals per dealer the gain was about 8 to 9 points per game.
+        assertTrue(perGame > 3.0, "Neuer Computer ist kaum stärker als der alte: $perGame")
     }
 }

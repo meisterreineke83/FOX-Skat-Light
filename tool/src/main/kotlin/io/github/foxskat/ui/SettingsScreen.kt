@@ -21,6 +21,9 @@ import com.thelightphone.sdk.ui.LightThemeColors
 import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
 import io.github.foxskat.core.Texts
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit>() {
@@ -39,9 +42,22 @@ class SettingsViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit
     fun rename(seat: Int, name: String) {
         viewModelScope.launch { Table.rename(prefs, seat, name) }
     }
+
+    private val _confirmForget = MutableStateFlow(false)
+    val confirmForget: StateFlow<Boolean> = _confirmForget.asStateFlow()
+
+    /** First tap asks, second tap makes the computer players forget what they learned. */
+    fun forgetExperience() {
+        if (!_confirmForget.value) {
+            _confirmForget.value = true
+            return
+        }
+        _confirmForget.value = false
+        viewModelScope.launch { Table.forgetExperience(prefs) }
+    }
 }
 
-/** ANZEIGE: light/dark and the names of the two computer players. */
+/** ANZEIGE: light/dark, the names of the two computer players and what they have learned. */
 class SettingsScreen(sealedActivity: SealedLightActivity) :
     LightScreen<Unit, SettingsViewModel>(sealedActivity) {
 
@@ -56,14 +72,15 @@ class SettingsScreen(sealedActivity: SealedLightActivity) :
         val version by viewModel.version.collectAsState()
         val colors by LightThemeController.colors.collectAsState()
         val isDark = colors == LightThemeColors.Dark
+        val confirmForget by viewModel.confirmForget.collectAsState()
 
         key(version) {
-            Settings(isDark)
+            Settings(isDark, confirmForget)
         }
     }
 
     @Composable
-    private fun Settings(isDark: Boolean) {
+    private fun Settings(isDark: Boolean, confirmForget: Boolean) {
         ToolScaffold(title = "Anzeige", onBack = { goBack() }) {
             MenuItem("HELL / DUNKEL", value = if (isDark) "DUNKEL" else "HELL") {
                 viewModel.toggleTheme()
@@ -77,7 +94,14 @@ class SettingsScreen(sealedActivity: SealedLightActivity) :
                     )
                 }
             }
-            HintText("Links spielt nach dir, rechts vor dir. Tippe auf einen Namen, um ihn zu ändern.")
+            val games = Table.experience.games
+            MenuItem("ERFAHRUNG", value = if (confirmForget) "LÖSCHEN?" else if (games == 1) "1 SPIEL" else "$games SPIELE") {
+                viewModel.forgetExperience()
+            }
+            HintText(
+                "Links spielt nach dir, rechts vor dir. Tippe auf einen Namen, um ihn zu ändern. " +
+                    "Die Computergegner lernen aus euren Spielen; zweimal auf ERFAHRUNG tippen lässt sie neu anfangen."
+            )
         }
     }
 }

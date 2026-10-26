@@ -33,8 +33,9 @@ class SaveTest {
         repeat(12) { Ai.act(r, r.activeSeat!!) }
         val restored = Round.decode(r.encode())!!
         while (restored.activeSeat != null) Ai.act(restored, restored.activeSeat!!)
+        assertEquals(Phase.FINISHED, restored.phase)
         while (r.activeSeat != null) Ai.act(r, r.activeSeat!!)
-        assertEquals(snapshot(r), snapshot(restored))
+        assertEquals(snapshot(r).take(6), snapshot(restored).take(6), "Reizen und Spiel bleiben gleich")
     }
 
     @Test

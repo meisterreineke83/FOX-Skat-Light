@@ -17,6 +17,10 @@ Skat auf dem Light Phone III – offline gegen zwei Computergegner.
 - **Ausspielen:** Karte antippen (sie wird hervorgehoben), noch einmal tippen spielt sie.
   Karten, die du nicht bedienen darfst, sind abgeblendet. Der letzte Stich bleibt stehen, bis
   der nächste beginnt.
+- **Kontra und Re:** Vor der ersten Karte fragt das Spiel jeden Gegenspieler, der beim Reizen
+  mindestens 18 gesagt oder gehalten hat, ob er Kontra gibt (unten `WEITER` oder `KONTRA`).
+  Nach einem Kontra kann der Alleinspieler `RE` sagen. Kontra verdoppelt das Ergebnis, Re
+  vervierfacht es; in der Liste steht es beim Spiel dabei. Im Ramsch gibt es kein Kontra.
 - **Abrechnung:** Spitzen (mit/ohne), Hand, Schneider, Schwarz, Ansagen, Ouvert und Überreizen.
   Gewonnen zählt der Spielwert, verloren das Doppelte als Minus.
 - **Tisch:** Oben steht, was gerade los ist. Darunter sitzt ihr wie am echten Tisch: links Marc,
@@ -24,18 +28,29 @@ Skat auf dem Light Phone III – offline gegen zwei Computergegner.
   die Karte, die er in den Stich gelegt hat. Der Alleinspieler ist schwarz hinterlegt, wer dran ist,
   unterstrichen. Trümpfe auf deiner Hand haben unten einen schwarzen Balken.
 - **Liste** mit allen Spielen und dem Zwischenstand oben. Sie bleibt gespeichert.
-- Unter `ANZEIGE`: Hell/Dunkel und die Namen der beiden Computergegner.
+- **Laufende Runde:** Sie wird nach jedem Zug gespeichert. Kommt ein Anruf dazwischen oder ist
+  der Akku leer, geht es beim nächsten Öffnen mit `WEITERSPIELEN` genau dort weiter.
+- Unter `ANZEIGE`: Hell/Dunkel, die Namen der beiden Computergegner und ihre `ERFAHRUNG`.
 
-Noch nicht dabei: Kontra/Re, Schieben im Ramsch, Bockrunden, Seeger-Fabian-Wertung. Ein laufendes Spiel
-geht verloren, wenn das Tool beendet wird; die Liste bleibt.
+Noch nicht dabei: Schieben im Ramsch, Bockrunden, Seeger-Fabian-Wertung.
 
 ## Die Computergegner
 
-Sie reizen nach Faustregeln (Trümpfe, Buben, Asse, Zehnen mit Ass), drücken blanke Zehnen und
-kurze Farben und spielen nach bekannten Regeln: Trumpf ziehen als Alleinspieler, Asse vorweg,
-„kurzer Weg, lange Farbe“, Schmieren beim Partner und Untendrunterbleiben im Null. Sie sehen nur,
-was ein Mensch am Tisch auch sehen würde. In 5000 Testspielen der Computer gegeneinander
-gewinnt der Alleinspieler etwa drei von vier Spielen.
+Sie reizen nach Faustregeln (Trümpfe, Buben, Asse, Zehnen mit Ass) und drücken blanke Zehnen und
+kurze Farben. Beim Ausspielen rechnen sie voraus: Sie merken sich alle gefallenen Karten und wer
+welche Farbe nicht bedienen konnte, verteilen die Karten, die sie nicht sehen, 50-mal passend dazu
+neu, spielen jede Verteilung bis zum Ende durch und nehmen die Karte, die im Schnitt am besten
+abschneidet. Sie sehen dabei nur, was ein Mensch am Tisch auch sehen würde.
+
+Gegen die Computergegner aus Version 0.3 holt ein neuer Computergegner bei denselben Karten
+rund 8 Punkte je Spiel mehr (`StrengthTest`).
+
+**Sie lernen dazu:** Nach jedem Spiel passen sie an, wie mutig sie reizen und wie schnell sie
+Kontra geben. Gewinnen sie als Alleinspieler, werden sie etwas mutiger, verlieren sie, deutlich
+vorsichtiger. Ein Kontra, das trotzdem verloren geht, macht sie vorsichtiger mit Kontra; verlierst
+du ein Spiel, ohne dass sie Kontra gegeben haben, geben sie künftig eher Kontra. Das Gelernte bleibt
+auf dem Telefon gespeichert; unter `ANZEIGE` → `ERFAHRUNG` steht, aus wie vielen Spielen sie schon
+gelernt haben, und zweimal Tippen lässt sie von vorn anfangen.
 
 ## Datenschutz
 
@@ -44,7 +59,8 @@ gewinnt der Alleinspieler etwa drei von vier Spielen.
 | nichts | – | – |
 
 - Das Tool braucht keine Berechtigungen und baut keine Verbindung ins Internet auf.
-- Die Liste liegt im privaten Speicher des Tools auf dem Telefon.
+- Die Liste, die laufende Runde und das Gelernte der Computergegner liegen im privaten Speicher
+  des Tools auf dem Telefon.
 
 ## APK bauen lassen
 
@@ -80,8 +96,10 @@ Der Code liegt in [`tool/src/main/kotlin/io/github/foxskat`](tool/src/main/kotli
 |---|---|
 | `core/Cards.kt` | Farben, Werte, Karten, Augen |
 | `core/Rules.kt` | Spielarten, Trumpf, Bedienen, Stiche, Spitzen, Spielwert und Abrechnung |
-| `core/Round.kt` | eine Runde vom Reizen bis zur Abrechnung, prüft jeden Zug |
-| `core/Ai.kt` | Computergegner: Reizen, Drücken, Ansagen, Ausspielen |
+| `core/Round.kt` | eine Runde vom Reizen bis zur Abrechnung, prüft jeden Zug, speichert und lädt sie |
+| `core/Ai.kt` | Computergegner: Reizen, Drücken, Ansagen, Kontra, Ausspielen |
+| `core/Lookahead.kt` | Vorausrechnen beim Ausspielen über erratene Kartenverteilungen |
+| `core/Experience.kt` | was die Computergegner aus den Spielen lernen |
 | `core/ScoreSheet.kt` | Liste und Sortierung der Hand |
 | `core/Texts.kt` | Texte für die Anzeige |
 | `ui/…Screen.kt` | Oberfläche mit den Bausteinen der Light SDK |

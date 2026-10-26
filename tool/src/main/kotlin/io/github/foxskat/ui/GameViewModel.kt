@@ -7,6 +7,7 @@ import com.thelightphone.sdk.LightViewModel
 import io.github.foxskat.core.Ai
 import io.github.foxskat.core.Card
 import io.github.foxskat.core.Contract
+import io.github.foxskat.core.Experience
 import io.github.foxskat.core.GameKind
 import io.github.foxskat.core.Phase
 import io.github.foxskat.core.Round
@@ -42,6 +43,10 @@ object Table {
     var round: Round? = null
         private set
 
+    /** What the computer players have learned at this table. */
+    var experience = Experience()
+        private set
+
     private var recorded = false
 
     /** Length of the list when the current round was dealt. */
@@ -54,6 +59,7 @@ object Table {
         if (!loaded) {
             _sheet.value = prefs.loadSheet()
             Texts.names = prefs.loadNames()
+            experience = prefs.loadExperience().also { it.apply() }
             prefs.loadRound()?.let { (listSize, saved) ->
                 round = saved
                 dealtAt = listSize
@@ -82,6 +88,8 @@ object Table {
         recorded = true
         _sheet.value = _sheet.value.add(r)
         prefs.saveSheet(_sheet.value)
+        experience = experience.learn(r, HUMAN).also { it.apply() }
+        prefs.saveExperience(experience)
         changed()
     }
 
@@ -91,6 +99,13 @@ object Table {
         if (clean.isEmpty()) return
         Texts.names = if (seat == 1) clean to Texts.names.second else Texts.names.first to clean
         prefs.saveName(seat, clean)
+        changed()
+    }
+
+    /** Lets the computer players start again from scratch. */
+    suspend fun forgetExperience(prefs: Prefs) {
+        experience = Experience().also { it.apply() }
+        prefs.saveExperience(experience)
         changed()
     }
 

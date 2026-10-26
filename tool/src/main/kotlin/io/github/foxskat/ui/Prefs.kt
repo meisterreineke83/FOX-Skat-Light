@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.thelightphone.sdk.ui.LightThemeController
+import io.github.foxskat.core.Experience
 import io.github.foxskat.core.Round
 import io.github.foxskat.core.ScoreSheet
 import io.github.foxskat.core.Texts
@@ -58,11 +59,19 @@ class Prefs(private val store: DataStore<Preferences>) {
         }
     }
 
+    /** What the computer players have learned so far. */
+    suspend fun loadExperience(): Experience = Experience.decode(store.data.first()[EXPERIENCE])
+
+    suspend fun saveExperience(experience: Experience) {
+        store.edit { it[EXPERIENCE] = experience.encode() }
+    }
+
     companion object {
         private val LIGHT_THEME = booleanPreferencesKey("lightTheme")
         private val SHEET = stringPreferencesKey("scoreSheet")
         private val LEFT_NAME = stringPreferencesKey("leftName")
         private val RIGHT_NAME = stringPreferencesKey("rightName")
         private val ROUND = stringPreferencesKey("round")
+        private val EXPERIENCE = stringPreferencesKey("experience")
     }
 }
