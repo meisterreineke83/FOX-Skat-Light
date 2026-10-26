@@ -21,6 +21,11 @@ class Round(val dealer: Int, deck: List<Card>) {
         require(deck.size == 32 && deck.toSet().size == 32) { "Ein Skatblatt hat 32 verschiedene Karten" }
     }
 
+    private val deck: List<Card> = deck.toList()
+
+    /** Every action so far in a short text form, so the round can be saved and replayed. */
+    private val log = mutableListOf<String>()
+
     val vorhand = (dealer + 1) % 3
     val mittelhand = (dealer + 2) % 3
     val hinterhand = dealer
@@ -82,27 +87,29 @@ class Round(val dealer: Int, deck: List<Card>) {
         bid = value
         awaitingAnswer = true
         biddingLog += seat to value.toString()
+        log += "say $seat $value"
     }
 
     fun answer(seat: Int, hold: Boolean) {
         check(phase == Phase.BIDDING && awaitingAnswer && seat == listener) { "Nicht am Antworten" }
         awaitingAnswer = false
         biddingLog += seat to if (hold) "ja" else "passe"
+        log += "ans $seat ${if (hold) 1 else 0}"
         if (!hold) endStage(winner = bidder)
     }
 
     fun pass(seat: Int) {
         check(phase == Phase.BIDDING && seat == activeSeat) { "Nicht am Zug" }
-        if (biddingStage == 3) {
-            biddingLog += seat to "passe"
-            startRamsch()
-            return
-        }
-        if (awaitingAnswer) {
+        if (biddingStage < 3 && awaitingAnswer) {
             answer(seat, hold = false)
             return
         }
+        log += "pass $seat"
         biddingLog += seat to "passe"
+        if (biddingStage == 3) {
+            startRamsch()
+            return
+        }
         endStage(winner = listener)
     }
 
@@ -111,6 +118,7 @@ class Round(val dealer: Int, deck: List<Card>) {
         check(phase == Phase.BIDDING && biddingStage == 3 && seat == vorhand) { "Nicht am Zug" }
         bid = 18
         biddingLog += seat to "18"
+        log += "p18 $seat"
         startDeclaring(vorhand)
     }
 
@@ -160,11 +168,13 @@ class Round(val dealer: Int, deck: List<Card>) {
 
     fun playHand(seat: Int) {
         check(phase == Phase.SKAT_DECISION && seat == declarer)
+        log += "hand $seat"
         phase = Phase.DECLARE
     }
 
     fun pickUpSkat(seat: Int) {
         check(phase == Phase.SKAT_DECISION && seat == declarer)
+        log += "skat $seat"
         pickedUpSkat = true
         hands[seat] += skatCards
         skatCards.clear()
@@ -174,6 +184,7 @@ class Round(val dealer: Int, deck: List<Card>) {
     fun discard(seat: Int, cards: List<Card>) {
         check(phase == Phase.DISCARD && seat == declarer)
         require(cards.size == 2 && cards.toSet().size == 2 && hands[seat].containsAll(cards)) { "Zwei eigene Karten drücken" }
+        log += "drk $seat ${cards.joinToString(",")}"
         hands[seat] -= cards.toSet()
         skatCards += cards
         phase = Phase.DECLARE
@@ -194,6 +205,7 @@ class Round(val dealer: Int, deck: List<Card>) {
     fun declare(seat: Int, contract: Contract) {
         check(phase == Phase.DECLARE && seat == declarer)
         declareProblem(contract)?.let { throw IllegalArgumentException(it) }
+        log += "dcl $seat ${encodeContract(contract)}"
         this.contract = contract
         phase = Phase.PLAYING
         trickLeader = vorhand
@@ -241,6 +253,7 @@ class Round(val dealer: Int, deck: List<Card>) {
     fun kontra(seat: Int, say: Boolean) {
         check(seat == kontraDecider) { "Nicht am Kontra" }
         kontraDecided += seat
+        log += "kon $seat ${if (say) 1 else 0}"
         if (say) {
             if (seat == declarer) re = true else kontraBy = seat
         }
@@ -274,6 +287,7 @@ class Round(val dealer: Int, deck: List<Card>) {
     fun play(seat: Int, card: Card) {
         check(phase == Phase.PLAYING && seat == activeSeat) { "Nicht am Zug" }
         require(card in legalCards(seat)) { "$card darf jetzt nicht gespielt werden" }
+        log += "play $seat $card"
         hands[seat] -= card
         trickCards += card
         if (trickCards.size == 3) finishTrick()
@@ -319,7 +333,53 @@ class Round(val dealer: Int, deck: List<Card>) {
         )
     }
 
+    /** The deal and every action as text; [decode] turns it back into the same round. */
+    fun encode(): String = listOf(FORMAT, dealer.toString(), deck.joinToString(" "), log.joinToString(";")).joinToString("\n")
+
     companion object {
+        private const val FORMAT = "runde1"
+
+        private fun encodeContract(c: Contract): String =
+            listOf(c.kind.name, c.trump?.name ?: "-", c.hand, c.schneiderAngesagt, c.schwarzAngesagt, c.ouvert)
+                .joinToString(",") { if (it is Boolean) (if (it) "1" else "0") else it.toString() }
+
+        private fun decodeContract(text: String): Contract {
+            val p = text.split(',')
+            return Contract(
+                kind = GameKind.valueOf(p[0]),
+                trump = if (p[1] == "-") null else Suit.valueOf(p[1]),
+                hand = p[2] == "1",
+                schneiderAngesagt = p[3] == "1",
+                schwarzAngesagt = p[4] == "1",
+                ouvert = p[5] == "1",
+            )
+        }
+
+        /** Replays a saved round; null if the text is damaged or from an unknown version. */
+        fun decode(text: String): Round? = runCatching {
+            val lines = text.split('\n')
+            require(lines.size == 4 && lines[0] == FORMAT)
+            val round = Round(lines[1].toInt(), Card.parseList(lines[2]))
+            for (action in lines[3].split(';').filter { it.isNotBlank() }) {
+                val p = action.split(' ')
+                val seat = p[1].toInt()
+                when (p[0]) {
+                    "say" -> round.say(seat, p[2].toInt())
+                    "ans" -> round.answer(seat, p[2] == "1")
+                    "pass" -> round.pass(seat)
+                    "p18" -> round.playFor18(seat)
+                    "hand" -> round.playHand(seat)
+                    "skat" -> round.pickUpSkat(seat)
+                    "drk" -> round.discard(seat, p[2].split(',').map(Card::parse))
+                    "dcl" -> round.declare(seat, decodeContract(p[2]))
+                    "kon" -> round.kontra(seat, p[2] == "1")
+                    "play" -> round.play(seat, Card.parse(p[2]))
+                    else -> error("Unbekannter Zug $action")
+                }
+            }
+            round
+        }.getOrNull()
+
         fun shuffled(dealer: Int, random: Random = Random.Default): Round = Round(dealer, Card.DECK.shuffled(random))
     }
 }
