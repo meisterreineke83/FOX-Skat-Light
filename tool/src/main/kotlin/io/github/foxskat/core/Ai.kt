@@ -76,11 +76,14 @@ object Ai {
         return result.sortedByDescending { it.margin }
     }
 
+    /** Added to every margin in bidding: above 0 the computer bids more boldly. */
+    var boldness = 0.0
+
     /** Highest value this seat is willing to bid with its ten cards; 0 means pass. */
     fun maxBid(hand: Collection<Card>, vorhand: Boolean): Int {
         var best = 0
         for (o in options(hand, vorhand)) {
-            if (o.margin < 0) continue
+            if (o.margin + boldness < 0) continue
             val c = o.contract
             val value = if (c.kind == GameKind.NULL) {
                 if (o.margin >= 1.0) 35 else 23
@@ -187,12 +190,12 @@ object Ai {
     }
 
     /** Kontra for a defender, Re for the declarer. */
-    fun decideKontra(round: Round, seat: Int): Boolean {
+    fun decideKontra(round: Round, seat: Int, threshold: Double = kontraThreshold): Boolean {
         val c = round.contract!!
         val hand = round.hand(seat)
         if (seat != round.declarer) {
             val handGame = if (c.hand) 0.5 else 0.0
-            return c.kind != GameKind.NULL && defenceScore(hand, c) >= kontraThreshold + handGame
+            return c.kind != GameKind.NULL && defenceScore(hand, c) >= threshold + handGame
         }
         return when (c.kind) {
             GameKind.NULL -> nullDangers(hand).isEmpty()
@@ -278,6 +281,9 @@ object Ai {
             if (laterSeats.isEmpty()) {
                 return if (trickPoints == 0 && cheapestWinner.isJack) cheapest(c, legal) else cheapestWinner
             }
+            // The declarer has played already: whatever we take stays with our side.
+            val declarerDone = !k.isDeclarer && k.declarer !in laterSeats
+            if (declarerDone && (trickPoints >= 3 || !c.isTrump(cheapestWinner))) return cheapestWinner
             val sureWinners = winners.filter { k.isTop(it) }
             if (sureWinners.isNotEmpty()) return sureWinners.minBy { c.strength(it) }
             val partnerAfter = !k.isDeclarer && laterSeats.any { it != k.declarer }
