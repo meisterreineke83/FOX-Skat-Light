@@ -13,13 +13,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.thelightphone.sdk.ui.LightBarButton
 import com.thelightphone.sdk.ui.LightBottomBar
@@ -178,9 +186,13 @@ fun HintText(text: String) {
     )
 }
 
+/** Corner radius of a card tile in grid units. */
+private const val CARD_CORNER_UNITS = 0.4f
+
 /**
- * One card as a framed tile showing suit symbol and rank, e.g. "♥10".
- * Selected cards are drawn inverted, cards that cannot be played are dimmed.
+ * One card as a framed tile with rounded corners showing suit symbol and rank, e.g. "♥10".
+ * Selected cards are drawn inverted, cards that cannot be played are dimmed, and trumps
+ * carry a solid bar along the bottom edge.
  */
 @Composable
 fun CardTile(
@@ -188,15 +200,18 @@ fun CardTile(
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     dimmed: Boolean = false,
+    trump: Boolean = false,
     variant: LightTextVariant = LightTextVariant.Subheading,
     onClick: (() -> Unit)? = null,
 ) {
     val colors = LightThemeTokens.colors
     val frame = if (dimmed) colors.contentSecondary else colors.content
+    val shape = RoundedCornerShape(CARD_CORNER_UNITS.gridUnitsAsDp())
     Box(
         modifier = modifier
             .height(CARD_HEIGHT_UNITS.gridUnitsAsDp())
-            .let { if (card != null) it.border(1.dp, frame) else it }
+            .clip(shape)
+            .let { if (card != null) it.border(1.5.dp, frame, shape) else it }
             .background(if (selected) colors.content else colors.background)
             .let { if (onClick != null) it.lightClickable(onClick = onClick) else it },
         contentAlignment = Alignment.Center,
@@ -210,6 +225,15 @@ fun CardTile(
                 color = if (selected) colors.background else null,
                 maxLines = 1,
             )
+            if (trump) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(0.5f.gridUnitsAsDp())
+                        .background(if (selected) colors.background else frame),
+                )
+            }
         }
     }
 }
@@ -220,6 +244,7 @@ fun HandView(
     cards: List<Card>,
     selected: Set<Card>,
     playable: (Card) -> Boolean,
+    trump: (Card) -> Boolean,
     onTap: ((Card) -> Unit)?,
 ) {
     Column(
@@ -235,6 +260,7 @@ fun HandView(
                         card = card,
                         selected = card != null && card in selected,
                         dimmed = card != null && !playable(card),
+                        trump = card != null && trump(card),
                         onClick = if (card != null && onTap != null) ({ onTap(card) }) else null,
                         modifier = Modifier
                             .weight(1f)
@@ -246,18 +272,68 @@ fun HandView(
     }
 }
 
-/** A labelled card slot in the trick area, e.g. "LINKS" above the card that seat played. */
+/** What a seat shows in the middle of the table: a played card, a word said in bidding, or nothing. */
+sealed interface SeatSlot {
+    data class Played(val card: Card?, val wonTrick: Boolean) : SeatSlot
+    data class Word(val text: String) : SeatSlot
+}
+
+/**
+ * One player at the table: the name (inverted for the declarer, underlined while it is
+ * that player's turn), below it the slot and a short detail such as "3 Stiche" or "Vorhand".
+ */
 @Composable
-fun TrickSlot(label: String, card: Card?, highlight: Boolean, modifier: Modifier = Modifier) {
+fun SeatView(
+    name: String,
+    declarer: Boolean,
+    active: Boolean,
+    slot: SeatSlot,
+    detail: String,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LightThemeTokens.colors
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        LightText(text = label, variant = LightTextVariant.Copy, lighten = !highlight, maxLines = 1)
-        CardTile(
-            card = card,
-            selected = highlight && card != null,
-            variant = LightTextVariant.Heading,
+        Box(
             modifier = Modifier
-                .width(6f.gridUnitsAsDp())
-                .padding(top = 0.25f.gridUnitsAsDp()),
-        )
+                .clip(RoundedCornerShape(CARD_CORNER_UNITS.gridUnitsAsDp()))
+                .background(if (declarer) colors.content else colors.background)
+                .padding(horizontal = 0.5f.gridUnitsAsDp()),
+        ) {
+            LightText(
+                text = name.uppercase(),
+                variant = LightTextVariant.Paragraph,
+                underline = active,
+                color = if (declarer) colors.background else null,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        when (slot) {
+            is SeatSlot.Played -> CardTile(
+                card = slot.card,
+                selected = slot.wonTrick && slot.card != null,
+                variant = LightTextVariant.Heading,
+                modifier = Modifier
+                    .width(6f.gridUnitsAsDp())
+                    .padding(top = 0.25f.gridUnitsAsDp())
+                    .let { if (slot.card == null) it.dashedSlot(colors.contentSecondary, CARD_CORNER_UNITS.gridUnitsAsDp()) else it },
+            )
+            is SeatSlot.Word -> LightText(
+                text = slot.text,
+                variant = LightTextVariant.Subheading,
+                align = TextAlign.Center,
+                maxLines = 1,
+            )
+        }
+        LightText(text = detail, variant = LightTextVariant.Detail, lighten = true, maxLines = 1)
     }
+}
+
+/** Faint outline for an empty place on the table where a card will land. */
+private fun Modifier.dashedSlot(color: Color, corner: Dp): Modifier = drawBehind {
+    drawRoundRect(
+        color = color,
+        cornerRadius = CornerRadius(corner.toPx()),
+        style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f))),
+    )
 }
