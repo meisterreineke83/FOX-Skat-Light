@@ -161,6 +161,46 @@ object Ai {
         }
     }
 
+    // --- Kontra and Re ----------------------------------------------------------------------
+
+    /** Defender hand strength at or above which the computer gives Kontra. */
+    var kontraThreshold = 5.0
+
+    /** Margin of the declarer's game at or above which the computer answers with Re. */
+    var reMargin = 2.5
+
+    /** Roughly the tricks a defender's ten cards take against [c]; 0 for null. */
+    fun defenceScore(hand: Collection<Card>, c: Contract): Double {
+        if (c.kind == GameKind.NULL) return 0.0
+        val trumps = hand.filter { c.isTrump(it) }
+        var score = trumps.size * 0.8
+        // High trumps catch the declarer's trumps; a long trump suit wears his down.
+        score += trumps.count { it.isJack && it.suit.ordinal <= 1 } * 0.5
+        if (trumps.size >= 4) score += 0.5
+        for (s in Suit.entries) {
+            val side = hand.filter { it.suit == s && !c.isTrump(it) }.map { it.rank }
+            if (side.isEmpty()) continue
+            if (Rank.ASS in side) score += 1.0
+            if (Rank.ZEHN in side) score += if (Rank.ASS in side) 0.7 else if (side.size >= 3) 0.3 else 0.0
+        }
+        return score
+    }
+
+    /** Kontra for a defender, Re for the declarer. */
+    fun decideKontra(round: Round, seat: Int): Boolean {
+        val c = round.contract!!
+        val hand = round.hand(seat)
+        if (seat != round.declarer) {
+            val handGame = if (c.hand) 0.5 else 0.0
+            return c.kind != GameKind.NULL && defenceScore(hand, c) >= kontraThreshold + handGame
+        }
+        return when (c.kind) {
+            GameKind.NULL -> nullDangers(hand).isEmpty()
+            GameKind.FARBE -> suitScore(hand, c.trump!!) - SUIT_THRESHOLD >= reMargin
+            GameKind.GRAND -> grandScore(hand) - GRAND_THRESHOLD >= reMargin
+        }
+    }
+
     // --- Card play -------------------------------------------------------------------------
 
     fun chooseCard(round: Round, seat: Int): Card {
@@ -350,7 +390,11 @@ object Ai {
             Phase.BIDDING -> actInBidding(round, seat)
             Phase.SKAT_DECISION -> decideSkat(round, seat)
             Phase.DISCARD, Phase.DECLARE -> handleDiscardAndDeclare(round, seat)
-            Phase.PLAYING -> round.play(seat, chooseCard(round, seat))
+            Phase.PLAYING -> if (round.kontraDecider == seat) {
+                round.kontra(seat, decideKontra(round, seat))
+            } else {
+                round.play(seat, chooseCard(round, seat))
+            }
             Phase.FINISHED, Phase.PASSED_IN -> return false
         }
         return true

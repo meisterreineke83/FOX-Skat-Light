@@ -69,7 +69,7 @@ class Round(val dealer: Int, deck: List<Card>) {
                 else -> bidder
             }
             Phase.SKAT_DECISION, Phase.DISCARD, Phase.DECLARE -> declarer
-            Phase.PLAYING -> (trickLeader + currentTrick.size) % 3
+            Phase.PLAYING -> kontraDecider ?: ((trickLeader + currentTrick.size) % 3)
             Phase.FINISHED, Phase.PASSED_IN -> null
         }
 
@@ -199,6 +199,53 @@ class Round(val dealer: Int, deck: List<Card>) {
         trickLeader = vorhand
     }
 
+    // --- Kontra and Re --------------------------------------------------------------------
+
+    /** The defender who said Kontra, or -1. */
+    var kontraBy: Int = -1
+        private set
+
+    /** True if the declarer answered the Kontra with Re. */
+    var re: Boolean = false
+        private set
+
+    private val kontraDecided = mutableSetOf<Int>()
+
+    /** Doubling of the game: 1 normally, 2 with Kontra, 4 with Re. */
+    val kontraFactor: Int get() = if (re) 4 else if (kontraBy >= 0) 2 else 1
+
+    /** Only a defender who said or held at least 18 in bidding may give Kontra. */
+    fun mayKontra(seat: Int): Boolean =
+        seat != declarer && biddingLog.any { (s, word) -> s == seat && word != "passe" }
+
+    /**
+     * Before the first card each defender who may give Kontra decides in turn, starting with
+     * Vorhand; after a Kontra the declarer decides on Re. Null when nobody has to decide.
+     */
+    val kontraDecider: Int?
+        get() {
+            if (phase != Phase.PLAYING || isRamsch || tricks.isNotEmpty() || trickCards.isNotEmpty()) return null
+            if (kontraBy < 0) return (0..2).map { (vorhand + it) % 3 }.firstOrNull { it !in kontraDecided && mayKontra(it) }
+            return declarer.takeIf { it !in kontraDecided }
+        }
+
+    /** "Kontra" or "Kontra, Re" for display, null without Kontra. */
+    val kontraLabel: String?
+        get() = when {
+            re -> "Kontra, Re"
+            kontraBy >= 0 -> "Kontra"
+            else -> null
+        }
+
+    /** Kontra (from a defender) or Re (from the declarer), or declining it with [say] = false. */
+    fun kontra(seat: Int, say: Boolean) {
+        check(seat == kontraDecider) { "Nicht am Kontra" }
+        kontraDecided += seat
+        if (say) {
+            if (seat == declarer) re = true else kontraBy = seat
+        }
+    }
+
     // --- Playing ---------------------------------------------------------------------------
 
     var trickLeader: Int = vorhand
@@ -220,7 +267,7 @@ class Round(val dealer: Int, deck: List<Card>) {
     val initialSkat: List<Card> get() = originalSkat
 
     fun legalCards(seat: Int): List<Card> {
-        if (phase != Phase.PLAYING || seat != activeSeat) return emptyList()
+        if (phase != Phase.PLAYING || seat != activeSeat || kontraDecider != null) return emptyList()
         return contract!!.legalCards(hands[seat], trickCards)
     }
 
@@ -268,6 +315,7 @@ class Round(val dealer: Int, deck: List<Card>) {
             declarerCards = declarerCards,
             declarerPoints = pointsOf(declarer),
             declarerTricks = tricksOf(declarer).size,
+            kontraFactor = kontraFactor,
         )
     }
 

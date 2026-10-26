@@ -165,6 +165,9 @@ class GameViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit>() 
 
     fun declare(contract: Contract) = humanAction { it.declare(Table.HUMAN, contract) }
 
+    /** Kontra as defender or Re as declarer; [say] = false lets the game go on without. */
+    fun kontra(say: Boolean) = humanAction { it.kontra(Table.HUMAN, say) }
+
     fun nextRound() {
         Table.newRound()
         _selected.value = emptySet()

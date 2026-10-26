@@ -149,7 +149,14 @@ class GameScreen(sealedActivity: SealedLightActivity) :
                 LightBarButton.Text("LISTE", onClick = { navigateTo(::ScoreScreen) }),
                 LightBarButton.Text("WEITER", onClick = viewModel::nextRound),
             )
-            Phase.DECLARE, Phase.PLAYING -> null
+            Phase.PLAYING -> if (round.kontraDecider != Table.HUMAN) null else {
+                val word = if (round.declarer == Table.HUMAN) "RE" else "KONTRA"
+                listOf(
+                    LightBarButton.Text("WEITER", onClick = { viewModel.kontra(say = false) }),
+                    LightBarButton.Text(word, onClick = { viewModel.kontra(say = true) }),
+                )
+            }
+            Phase.DECLARE -> null
         }
     }
 
