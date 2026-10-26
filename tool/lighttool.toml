@@ -1,8 +1,8 @@
 [tool]
 id = "io.github.foxskat"
 label = "Skat"
-versionCode = 5
-versionName = "0.2.2"
+versionCode = 6
+versionName = "0.3.0"
 # Skat läuft komplett offline, deshalb braucht das Tool keine Berechtigungen.
 permissions = []
 capabilities = []
