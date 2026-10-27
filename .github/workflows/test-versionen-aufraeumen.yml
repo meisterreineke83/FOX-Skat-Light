@@ -1,0 +1,33 @@
+name: Test-Versionen aufräumen
+
+# Test-Versionen (test-pr-…) aus geschlossenen Pull Requests würden sonst unter Releases
+# liegen bleiben. Mit derselben versionCode wie das echte Release verwirren sie
+# Stores wie den BrightMarket, die nur bei höherer versionCode ein Update anbieten.
+on:
+  pull_request:
+    types: [closed]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test-Versionen geschlossener Pull Requests löschen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for tag in $(gh release list --limit 100 --json tagName --jq '.[].tagName | select(startswith("test-pr-"))'); do
+            pr="${tag#test-pr-}"
+            state=$(gh pr view "$pr" --json state --jq .state || echo UNKNOWN)
+            if [ "$state" = "MERGED" ] || [ "$state" = "CLOSED" ]; then
+              echo "Lösche $tag (PR #$pr ist $state)"
+              gh release delete "$tag" --cleanup-tag --yes
+            fi
+          done

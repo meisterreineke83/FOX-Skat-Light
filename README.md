@@ -66,7 +66,9 @@ gelernt haben, und zweimal Tippen lässt sie von vorn anfangen.
 
 Bei jedem Push auf `main` baut **Actions → „APK bauen“** die App, führt die Tests aus und legt
 unter **Releases** die Datei `FOX-Skat-Light.apk` ab. Für Pull Requests erscheint sie dort als
-Test-Version „test-pr-…“ und wird bei jedem neuen Push auf den PR ersetzt.
+Test-Version „test-pr-…“ und wird bei jedem neuen Push auf den PR ersetzt. Ist der PR gemergt oder geschlossen,
+räumt **„Test-Versionen aufräumen“** sie wieder weg, damit Stores wie der BrightMarket nur echte
+Releases sehen.
 
 Lokal geht es auch mit Android Studio oder:
 
