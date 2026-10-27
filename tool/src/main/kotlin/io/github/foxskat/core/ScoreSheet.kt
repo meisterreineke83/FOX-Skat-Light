@@ -65,7 +65,8 @@ data class ScoreSheet(val entries: List<ScoreEntry> = emptyList()) {
             )
         } else {
             val s = checkNotNull(round.settlement) { "Runde ist nicht fertig" }
-            ScoreEntry(number, round.declarer, round.contract!!.name, round.bid, s.won, s.score, s.declarerPoints)
+            val game = round.contract!!.name + (round.kontraLabel?.let { ", $it" } ?: "")
+            ScoreEntry(number, round.declarer, game, round.bid, s.won, s.score, s.declarerPoints)
         }
         return ScoreSheet(entries + entry)
     }

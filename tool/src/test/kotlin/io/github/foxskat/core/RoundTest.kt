@@ -134,6 +134,9 @@ class RoundTest {
         val kinds = mutableMapOf<GameKind, Int>()
         var won = 0
         var ramsch = 0
+        var kontra = 0
+        var kontraWon = 0
+        var re = 0
         repeat(1000) { i ->
             val r = Round(dealer = sheet.nextDealer, deck = deck(1000 + i))
             var steps = 0
@@ -148,6 +151,11 @@ class RoundTest {
                 val c = r.contract!!
                 kinds.merge(c.kind, 1, Int::plus)
                 if (r.settlement!!.won) won++
+                if (r.kontraBy >= 0) {
+                    kontra++
+                    if (r.settlement!!.won) kontraWon++
+                    if (r.re) re++
+                }
                 if (c.kind != GameKind.NULL || r.tricks.size == 10) {
                     assertEquals(120, r.pointsOf(r.declarer) + r.defenderPoints)
                 }
@@ -155,6 +163,7 @@ class RoundTest {
             }
             sheet = sheet.add(r)
         }
+        println("Kontra: $kontra (davon gewonnen vom Alleinspieler: $kontraWon), Re: $re")
         val played = kinds.values.sum()
         println("Spiele: $played von 1000, gewonnen: $won, Arten: $kinds, Ramsch: $ramsch")
         assertEquals(1000, played + ramsch)

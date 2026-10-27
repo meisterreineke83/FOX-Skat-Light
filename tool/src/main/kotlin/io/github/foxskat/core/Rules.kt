@@ -168,6 +168,8 @@ data class Settlement(
     val overbid: Boolean,
     val spitzen: Int,
     val mit: Boolean,
+    /** 1, or 2 with Kontra, 4 with Re; already included in [score]. */
+    val kontraFactor: Int = 1,
 )
 
 object Scoring {
@@ -185,6 +187,7 @@ object Scoring {
         declarerCards: Collection<Card>,
         declarerPoints: Int,
         declarerTricks: Int,
+        kontraFactor: Int = 1,
     ): Settlement {
         val spitzen = contract.spitzen(declarerCards)
         val mit = contract.isMit(declarerCards)
@@ -192,7 +195,8 @@ object Scoring {
             val value = contract.baseValue
             val overbid = value < bid
             val won = declarerTricks == 0 && !overbid
-            return Settlement(won, value, if (won) value else -2 * value, declarerPoints, false, false, overbid, 0, false)
+            val score = kontraFactor * if (won) value else -2 * value
+            return Settlement(won, value, score, declarerPoints, false, false, overbid, 0, false, kontraFactor)
         }
 
         val schneider = declarerPoints >= 90 || declarerPoints <= 30
@@ -207,7 +211,8 @@ object Scoring {
             won = false
             value = generateSequence(contract.baseValue) { it + contract.baseValue }.first { it >= bid }
         }
-        return Settlement(won, value, if (won) value else -2 * value, declarerPoints, schneider, schwarz, overbid, spitzen, mit)
+        val score = kontraFactor * if (won) value else -2 * value
+        return Settlement(won, value, score, declarerPoints, schneider, schwarz, overbid, spitzen, mit, kontraFactor)
     }
 }
 

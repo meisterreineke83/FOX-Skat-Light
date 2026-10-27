@@ -49,6 +49,7 @@ object Texts {
             Phase.DISCARD -> if (round.declarer == human) "Wähle zwei Karten zum Drücken." else "${seatName(round.declarer)} drückt …"
             Phase.DECLARE -> if (round.declarer == human) "Was spielst du?" else "${seatName(round.declarer)} sagt an …"
             Phase.PLAYING -> when {
+                active == round.kontraDecider -> kontraStatus(round, active!!, human)
                 active == human && round.currentTrick.isEmpty() -> "Du spielst aus."
                 active == human -> "Du bist dran."
                 else -> "${seatName(active!!)} ist dran …"
@@ -64,12 +65,22 @@ object Texts {
         val who = if (round.declarer == human) "Du hast" else "${seatName(round.declarer)} hat"
         val verdict = if (s.won) "gewonnen" else "verloren"
         val extra = buildList {
+            round.kontraLabel?.let { add(it) }
             if (s.overbid) add("überreizt")
             if (s.schwarz) add("schwarz") else if (s.schneider) add("Schneider")
         }.joinToString(", ").let { if (it.isEmpty()) "" else " ($it)" }
         val points = if (round.contract!!.kind == GameKind.NULL) "" else " mit ${s.declarerPoints} Augen"
         val sign = if (s.score > 0) "+" else ""
         return "$who ${round.contract!!.name}$points $verdict$extra: $sign${s.score}."
+    }
+
+    private fun kontraStatus(round: Round, seat: Int, human: Int): String {
+        val kontraFrom = round.kontraBy.takeIf { it >= 0 }?.let { if (it == human) "Du sagst" else "${seatName(it)} sagt" }
+        return when {
+            seat != human -> "${seatName(seat)} überlegt …"
+            kontraFrom != null -> "$kontraFrom Kontra. Sagst du Re?"
+            else -> "${seatName(round.declarer)} spielt ${round.contract!!.name}. Gibst du Kontra?"
+        }
     }
 
     private fun ramschResult(r: RamschResult): String {
@@ -102,7 +113,7 @@ object Texts {
         round.isRamsch -> "Alle gepasst · wer die meisten Augen hat, verliert"
         round.declarer >= 0 -> {
             val who = if (round.declarer == 0) "Du spielst" else "${seatName(round.declarer)} spielt"
-            "$who · gereizt bis ${round.bid}"
+            "$who · gereizt bis ${round.bid}" + (round.kontraLabel?.let { " · $it" } ?: "")
         }
         round.phase == Phase.BIDDING && round.bid > 0 -> "Gereizt: ${round.bid}"
         round.phase == Phase.BIDDING -> "Noch nichts gesagt"

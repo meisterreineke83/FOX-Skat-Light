@@ -76,11 +76,16 @@ object Ai {
         return result.sortedByDescending { it.margin }
     }
 
+    /** Added to every margin in bidding: above 0 the computer bids more boldly. */
+    var boldness = DEFAULT_BOLDNESS
+
+    const val DEFAULT_BOLDNESS = 0.4
+
     /** Highest value this seat is willing to bid with its ten cards; 0 means pass. */
     fun maxBid(hand: Collection<Card>, vorhand: Boolean): Int {
         var best = 0
         for (o in options(hand, vorhand)) {
-            if (o.margin < 0) continue
+            if (o.margin + boldness < 0) continue
             val c = o.contract
             val value = if (c.kind == GameKind.NULL) {
                 if (o.margin >= 1.0) 35 else 23
@@ -161,11 +166,57 @@ object Ai {
         }
     }
 
+    // --- Kontra and Re ----------------------------------------------------------------------
+
+    /** Defender hand strength at or above which the computer gives Kontra. */
+    var kontraThreshold = DEFAULT_KONTRA_THRESHOLD
+
+    const val DEFAULT_KONTRA_THRESHOLD = 5.0
+
+    /** Margin of the declarer's game at or above which the computer answers with Re. */
+    var reMargin = 2.5
+
+    /** Roughly the tricks a defender's ten cards take against [c]; 0 for null. */
+    fun defenceScore(hand: Collection<Card>, c: Contract): Double {
+        if (c.kind == GameKind.NULL) return 0.0
+        val trumps = hand.filter { c.isTrump(it) }
+        var score = trumps.size * 0.8
+        // High trumps catch the declarer's trumps; a long trump suit wears his down.
+        score += trumps.count { it.isJack && it.suit.ordinal <= 1 } * 0.5
+        if (trumps.size >= 4) score += 0.5
+        for (s in Suit.entries) {
+            val side = hand.filter { it.suit == s && !c.isTrump(it) }.map { it.rank }
+            if (side.isEmpty()) continue
+            if (Rank.ASS in side) score += 1.0
+            if (Rank.ZEHN in side) score += if (Rank.ASS in side) 0.7 else if (side.size >= 3) 0.3 else 0.0
+        }
+        return score
+    }
+
+    /** Kontra for a defender, Re for the declarer. */
+    fun decideKontra(round: Round, seat: Int, threshold: Double = kontraThreshold): Boolean {
+        val c = round.contract!!
+        val hand = round.hand(seat)
+        if (seat != round.declarer) {
+            val handGame = if (c.hand) 0.5 else 0.0
+            return c.kind != GameKind.NULL && defenceScore(hand, c) >= threshold + handGame
+        }
+        return when (c.kind) {
+            GameKind.NULL -> nullDangers(hand).isEmpty()
+            GameKind.FARBE -> suitScore(hand, c.trump!!) - SUIT_THRESHOLD >= reMargin
+            GameKind.GRAND -> grandScore(hand) - GRAND_THRESHOLD >= reMargin
+        }
+    }
+
     // --- Card play -------------------------------------------------------------------------
+
+    /** Think ahead over guessed deals ([Lookahead]) instead of using the rules of thumb alone. */
+    var lookahead = true
 
     fun chooseCard(round: Round, seat: Int): Card {
         val legal = round.legalCards(seat)
         if (legal.size == 1) return legal.single()
+        if (lookahead && !round.isRamsch) return Lookahead.chooseCard(round, seat, legal)
         val k = Knowledge(round, seat)
         return when {
             round.isRamsch -> playRamsch(round.contract!!, round.currentTrick, legal)
@@ -238,6 +289,9 @@ object Ai {
             if (laterSeats.isEmpty()) {
                 return if (trickPoints == 0 && cheapestWinner.isJack) cheapest(c, legal) else cheapestWinner
             }
+            // The declarer has played already: whatever we take stays with our side.
+            val declarerDone = !k.isDeclarer && k.declarer !in laterSeats
+            if (declarerDone && (trickPoints >= 3 || !c.isTrump(cheapestWinner))) return cheapestWinner
             val sureWinners = winners.filter { k.isTop(it) }
             if (sureWinners.isNotEmpty()) return sureWinners.minBy { c.strength(it) }
             val partnerAfter = !k.isDeclarer && laterSeats.any { it != k.declarer }
@@ -350,7 +404,11 @@ object Ai {
             Phase.BIDDING -> actInBidding(round, seat)
             Phase.SKAT_DECISION -> decideSkat(round, seat)
             Phase.DISCARD, Phase.DECLARE -> handleDiscardAndDeclare(round, seat)
-            Phase.PLAYING -> round.play(seat, chooseCard(round, seat))
+            Phase.PLAYING -> if (round.kontraDecider == seat) {
+                round.kontra(seat, decideKontra(round, seat))
+            } else {
+                round.play(seat, chooseCard(round, seat))
+            }
             Phase.FINISHED, Phase.PASSED_IN -> return false
         }
         return true

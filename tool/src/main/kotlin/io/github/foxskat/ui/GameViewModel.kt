@@ -7,6 +7,7 @@ import com.thelightphone.sdk.LightViewModel
 import io.github.foxskat.core.Ai
 import io.github.foxskat.core.Card
 import io.github.foxskat.core.Contract
+import io.github.foxskat.core.Experience
 import io.github.foxskat.core.GameKind
 import io.github.foxskat.core.Phase
 import io.github.foxskat.core.Round
@@ -24,7 +25,8 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * The table outlives single screens: going back to the menu and returning keeps the
- * running game. Only the score list is saved; a game is lost if the tool is closed.
+ * running game. The round is saved after every move, so a call or an empty battery
+ * does not lose it.
  */
 object Table {
     const val HUMAN = 0
@@ -41,7 +43,15 @@ object Table {
     var round: Round? = null
         private set
 
+    /** What the computer players have learned at this table. */
+    var experience = Experience()
+        private set
+
     private var recorded = false
+
+    /** Length of the list when the current round was dealt. */
+    private var dealtAt = 0
+
     private var loaded = false
     private val loadLock = Mutex()
 
@@ -49,14 +59,26 @@ object Table {
         if (!loaded) {
             _sheet.value = prefs.loadSheet()
             Texts.names = prefs.loadNames()
+            experience = prefs.loadExperience().also { it.apply() }
+            prefs.loadRound()?.let { (listSize, saved) ->
+                round = saved
+                dealtAt = listSize
+                recorded = _sheet.value.entries.size > listSize
+            }
             loaded = true
+            changed()
         }
     }
 
     fun newRound() {
         round = Round.shuffled(dealer = _sheet.value.nextDealer)
         recorded = false
+        dealtAt = _sheet.value.entries.size
         changed()
+    }
+
+    suspend fun save(prefs: Prefs) {
+        prefs.saveRound(dealtAt, round)
     }
 
     /** Writes a finished round to the list once. */
@@ -66,6 +88,8 @@ object Table {
         recorded = true
         _sheet.value = _sheet.value.add(r)
         prefs.saveSheet(_sheet.value)
+        experience = experience.learn(r, HUMAN).also { it.apply() }
+        prefs.saveExperience(experience)
         changed()
     }
 
@@ -78,10 +102,18 @@ object Table {
         changed()
     }
 
+    /** Lets the computer players start again from scratch. */
+    suspend fun forgetExperience(prefs: Prefs) {
+        experience = Experience().also { it.apply() }
+        prefs.saveExperience(experience)
+        changed()
+    }
+
     suspend fun clearSheet(prefs: Prefs) {
         _sheet.value = ScoreSheet()
         prefs.saveSheet(_sheet.value)
         round = null
+        prefs.saveRound(0, null)
         changed()
     }
 
@@ -112,7 +144,10 @@ class GameViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit>() 
         viewModelScope.launch {
             prefs.applyTheme()
             Table.ensureLoaded(prefs)
-            if (Table.round == null) Table.newRound()
+            if (Table.round == null) {
+                Table.newRound()
+                Table.save(prefs)
+            }
             drive()
         }
     }
@@ -134,6 +169,7 @@ class GameViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit>() 
                 if (Table.round !== r) continue
                 Ai.act(r, seat)
                 Table.changed()
+                Table.save(prefs)
             }
         }
     }
@@ -143,7 +179,10 @@ class GameViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit>() 
         runCatching { action(r) }
         _selected.value = emptySet()
         Table.changed()
-        drive()
+        viewModelScope.launch {
+            Table.save(prefs)
+            drive()
+        }
     }
 
     fun say() = humanAction { r -> Contract.nextBid(r.bid)?.let { r.say(Table.HUMAN, it) } }
@@ -165,11 +204,17 @@ class GameViewModel(dataStore: DataStore<Preferences>) : LightViewModel<Unit>() 
 
     fun declare(contract: Contract) = humanAction { it.declare(Table.HUMAN, contract) }
 
+    /** Kontra as defender or Re as declarer; [say] = false lets the game go on without. */
+    fun kontra(say: Boolean) = humanAction { it.kontra(Table.HUMAN, say) }
+
     fun nextRound() {
         Table.newRound()
         _selected.value = emptySet()
         _announcement.value = Announcement.KEINE
-        drive()
+        viewModelScope.launch {
+            Table.save(prefs)
+            drive()
+        }
     }
 
     fun cycleAnnouncement() {
