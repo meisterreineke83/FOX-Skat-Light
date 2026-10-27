@@ -1,6 +1,10 @@
 # FOX Skat Light
 Skat auf dem Light Phone III – offline gegen zwei Computergegner.
 
+Aktuelle Version: **0.4.0**. Die fertige App liegt unter **Releases** als `FOX-Skat-Light.apk`;
+wie sie aufs Telefon kommt, steht unten unter „Aufs Light Phone bringen“. Wie das Tool bis hierhin
+entstanden ist, steht unter „Entwicklungsschritte“.
+
 ## Was es kann
 
 - **Ein Spieler gegen zwei Computergegner** (Marc links, Martin rechts; die Namen lassen sich
@@ -108,6 +112,23 @@ Der Code liegt in [`tool/src/main/kotlin/io/github/foxskat`](tool/src/main/kotli
 
 Der Rest des Repos ist die [Light SDK](https://github.com/lightphone/light-sdk) (Stand Oktober 2026),
 deren ursprüngliche README in `README.light-sdk.md` liegt.
+
+## Entwicklungsschritte
+
+Ab 0.2.0 liegt jede Version unter **Releases** mit eigener APK, sodass man jederzeit auf einen
+älteren Stand zurück kann.
+
+| Version | Datum | Was dazukam |
+|---|---|---|
+| 0.1 | 22.10.2026 | Grundgerüst auf Basis der Light SDK. Spiellogik nach der Internationalen Skatordnung: Reizen, Skat aufnehmen oder Hand, Drücken, Farbspiele, Grand, Null und Null Ouvert, Ansagen, Spitzen, Schneider/Schwarz, Überreizen. Erste Computergegner für Reizen, Drücken, Ansagen und Ausspielen. Liste mit Abrechnung. Tests für Regeln, Abrechnung und 1000 Computerrunden. In 0.1.1: gelegte Karten erscheinen sofort, nicht erst nach dem Neuaufbau des Bildschirms. |
+| 0.2.0 | 22.10.2026 | Die Computergegner heißen Marc und Martin, die Namen lassen sich unter `ANZEIGE` ändern. Ramsch, wenn alle passen (Jungfrau, Durchmarsch). Liste mit großem Zwischenstand oben. Spielart groß in der Kopfzeile, größere Karten. Pull Requests liefern ihre APK als Test-Version unter Releases. |
+| 0.2.1 | 22.10.2026 | Kartenbeschriftung passt wieder auf die Karte: Die Farbsymbole wurden als breite Emoji gezeichnet, bei ♣10 fiel die Null heraus. |
+| 0.2.2 | 22.10.2026 | Eigene Zeile mit Position und Stichzahl während des Spiels, Spielerzeilen kleiner, Karten höher. |
+| 0.3.0 | 26.10.2026 | Neue Optik: Die drei sitzen wie am Tisch nebeneinander, mit Reizwort oder gelegter Karte. Dadurch werden Ansage und Stich unten nicht mehr abgeschnitten. Alleinspieler schwarz hinterlegt, wer dran ist unterstrichen, Trümpfe mit Balken, Karten mit runden Ecken. |
+| 0.4.0 | 27.10.2026 | Kontra und Re. Die laufende Runde wird nach jedem Zug gespeichert und lässt sich mit `WEITERSPIELEN` fortsetzen. Stärkere Computergegner, die vorausrechnen (rund 8 Punkte je Spiel mehr als in 0.3) und aus den Spielen lernen, mit `ERFAHRUNG` unter `ANZEIGE`. Der eigene Platz sitzt etwas tiefer, die drei sitzen im Dreieck. |
+
+Bewusst weggelassen: den letzten Stich nachträglich ansehen und das Scrollrad. Vielleicht später:
+Schieben im Ramsch, Bockrunden, Seeger-Fabian-Wertung.
 
 ## Für die offizielle Tool-Bibliothek
 
