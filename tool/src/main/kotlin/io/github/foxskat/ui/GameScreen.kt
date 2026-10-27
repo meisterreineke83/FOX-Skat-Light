@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.thelightphone.sdk.LightScreen
 import com.thelightphone.sdk.SealedLightActivity
 import com.thelightphone.sdk.ui.LightBarButton
@@ -27,6 +28,9 @@ import io.github.foxskat.core.GameKind
 import io.github.foxskat.core.Phase
 import io.github.foxskat.core.Round
 import io.github.foxskat.core.Texts
+
+/** How far your own place at the table sits below the two others, in grid units. */
+private const val OWN_SEAT_DROP_UNITS = 1f
 
 class GameScreen(sealedActivity: SealedLightActivity) :
     LightScreen<Unit, GameViewModel>(sealedActivity) {
@@ -164,6 +168,7 @@ class GameScreen(sealedActivity: SealedLightActivity) :
      * The table as seen from the chair: left neighbour, you, right neighbour. While playing each
      * place holds the card that player put into the current trick (or the last trick, with the
      * winner's card inverted); before that it holds the player's last word in bidding.
+     * Your own place sits a little lower, so the three form a triangle as at a real table.
      */
     @Composable
     private fun TableView(round: Round) {
@@ -194,7 +199,9 @@ class GameScreen(sealedActivity: SealedLightActivity) :
                     active = seat == round.activeSeat,
                     slot = slot,
                     detail = if (playing) Texts.tricks(round.tricksOf(seat).size) else Texts.position(round, seat),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(top = if (seat == Table.HUMAN) OWN_SEAT_DROP_UNITS.gridUnitsAsDp() else 0.dp),
                 )
             }
         }

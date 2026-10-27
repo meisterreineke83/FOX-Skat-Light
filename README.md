@@ -24,7 +24,7 @@ Skat auf dem Light Phone III – offline gegen zwei Computergegner.
 - **Abrechnung:** Spitzen (mit/ohne), Hand, Schneider, Schwarz, Ansagen, Ouvert und Überreizen.
   Gewonnen zählt der Spielwert, verloren das Doppelte als Minus.
 - **Tisch:** Oben steht, was gerade los ist. Darunter sitzt ihr wie am echten Tisch: links Marc,
-  in der Mitte du, rechts Martin. Beim Reizen steht dort, was jeder zuletzt gesagt hat, beim Spielen
+  in der Mitte und etwas tiefer du, rechts Martin. Beim Reizen steht dort, was jeder zuletzt gesagt hat, beim Spielen
   die Karte, die er in den Stich gelegt hat. Der Alleinspieler ist schwarz hinterlegt, wer dran ist,
   unterstrichen. Trümpfe auf deiner Hand haben unten einen schwarzen Balken.
 - **Liste** mit allen Spielen und dem Zwischenstand oben. Sie bleibt gespeichert.
