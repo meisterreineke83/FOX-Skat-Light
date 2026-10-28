@@ -1,6 +1,12 @@
 # FOX Skat Light
 Skat auf dem Light Phone III – offline gegen zwei Computergegner.
 
+<p>
+  <img src="docs/screenshots/1-start.png" alt="Startbildschirm" width="260">
+  <img src="docs/screenshots/2-spiel.png" alt="Spiel am Tisch" width="260">
+  <img src="docs/screenshots/3-liste.png" alt="Liste" width="260">
+</p>
+
 ## Was es kann
 
 - **Ein Spieler gegen zwei Computergegner** (Marc links, Martin rechts; die Namen lassen sich
@@ -107,6 +113,9 @@ Der Code liegt in [`tool/src/main/kotlin/io/github/foxskat`](tool/src/main/kotli
 | `ui/…Screen.kt` | Oberfläche mit den Bausteinen der Light SDK |
 
 `core/` kommt ohne Android aus; die Tests dazu liegen in `tool/src/test`.
+
+Die Bildschirmfotos liegen in [`docs/screenshots`](docs/screenshots). Bright Market zeigt sie von dort
+automatisch an, sortiert nach Dateinamen (`1-…`, `2-…`, `3-…`).
 
 Der Rest des Repos ist die [Light SDK](https://github.com/lightphone/light-sdk) (Stand Oktober 2026),
 deren ursprüngliche README in `README.light-sdk.md` liegt.
