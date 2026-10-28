@@ -1,3 +1,5 @@
+<img src="docs/icon.png" alt="" width="72" align="left" />
+
 # FOX Skat Light
 Skat auf dem Light Phone III – offline gegen zwei Computergegner.
 
