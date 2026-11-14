@@ -73,7 +73,9 @@ gelernt haben, und zweimal Tippen lässt sie von vorn anfangen.
 ## APK bauen lassen
 
 Bei jedem Push auf `main` baut **Actions → „APK bauen“** die App, führt die Tests aus und legt
-unter **Releases** die Datei `FOX-Skat-Light.apk` ab. Für Pull Requests erscheint sie dort als
+unter **Releases** die Datei `FOX-Skat-Light.apk` ab. Gebaut wird seit 0.4.2 die schlanke
+Release-Fassung nur für arm64 (das Light Phone III) und ohne den Barcode-Scanner aus dem SDK –
+statt 82 MB nur noch wenige MB. Für Pull Requests erscheint sie dort als
 Test-Version „test-pr-…“ und wird bei jedem neuen Push auf den PR ersetzt. Ist der PR gemergt oder geschlossen,
 räumt **„Test-Versionen aufräumen“** sie wieder weg, damit Stores wie der BrightMarket nur echte
 Releases sehen.
@@ -81,8 +83,10 @@ Releases sehen.
 Lokal geht es auch mit Android Studio oder:
 
 ```
-./gradlew :tool:assembleDebug -DlightSdk.toolOnly=true
+./gradlew :tool:assembleRelease -DlightSdk.toolOnly=true -DlightSdk.abiFilters=arm64-v8a
 ```
+
+(`assembleDebug` geht auch, wird aber viel größer.)
 
 ## Aufs Light Phone bringen
 
