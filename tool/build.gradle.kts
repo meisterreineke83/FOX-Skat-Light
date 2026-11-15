@@ -56,6 +56,16 @@ android {
         }
     }
 
+    // Skat nutzt weder Kamera noch QR-/Barcode-Scanner. Der Scanner aus dem SDK bringt
+    // ein großes natives Modell mit (libbarhopper_v3.so, ~5 MB je Prozessortyp) und
+    // Erkennungsmodelle als Assets – beides wird nicht mit eingepackt.
+    packaging {
+        jniLibs.excludes += "**/libbarhopper_v3.so"
+    }
+    androidResources {
+        ignoreAssetsPatterns += "mlkit_barcode_models"
+    }
+
     lint {
         warningsAsErrors = false
         error += "RestrictedApi"
