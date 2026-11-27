@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -44,6 +45,7 @@ import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.lightClickable
 import io.github.foxskat.core.Card
+import io.github.foxskat.core.Suit
 
 /** Height of one row in lists, in LP3 grid units. */
 const val LIST_ROW_UNITS = 4f
@@ -56,6 +58,19 @@ const val CARDS_PER_ROW = 6
  * colour emoji, so that "♣10" fits on a card.
  */
 private const val TEXT_STYLE = "\uFE0E"
+
+/** Minimum number of hand rows, so a short hand keeps its place instead of sliding down. */
+private const val MIN_HAND_ROWS = 2
+
+/** Red for Herz and Karo, brighter on a dark background and deeper on a light one. */
+private val RED_ON_DARK = Color(0xFFFF5A5A)
+private val RED_ON_LIGHT = Color(0xFFC8102E)
+
+/** True for the red suits, Herz and Karo. */
+val Suit.isRed: Boolean get() = this == Suit.HERZ || this == Suit.KARO
+
+/** The red that reads well on [background]. */
+fun suitRed(background: Color): Color = if (background.luminance() < 0.5f) RED_ON_DARK else RED_ON_LIGHT
 
 /** Height of a card tile in grid units. */
 const val CARD_HEIGHT_UNITS = 5f
@@ -147,7 +162,13 @@ fun TwoLineRow(
 
 /** Upper-case menu entry like in LightOS, with an optional value on the right. */
 @Composable
-fun MenuItem(label: String, value: String? = null, enabled: Boolean = true, onClick: () -> Unit) {
+fun MenuItem(
+    label: String,
+    value: String? = null,
+    enabled: Boolean = true,
+    labelColor: Color? = null,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -155,7 +176,12 @@ fun MenuItem(label: String, value: String? = null, enabled: Boolean = true, onCl
             .padding(horizontal = 1f.gridUnitsAsDp(), vertical = 0.75f.gridUnitsAsDp()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LightText(text = label, variant = LightTextVariant.Copy, lighten = !enabled)
+        LightText(
+            text = label,
+            variant = LightTextVariant.Copy,
+            lighten = !enabled,
+            color = labelColor?.let { if (enabled) it else it.copy(alpha = 0.5f) },
+        )
         Spacer(modifier = Modifier.weight(1f))
         if (value != null) {
             LightText(text = value, variant = LightTextVariant.Copy, lighten = true)
@@ -191,8 +217,8 @@ private const val CARD_CORNER_UNITS = 0.4f
 
 /**
  * One card as a framed tile with rounded corners showing suit symbol and rank, e.g. "♥10".
- * Selected cards are drawn inverted, cards that cannot be played are dimmed, and trumps
- * carry a solid bar along the bottom edge.
+ * Herz and Karo are written in red. Selected cards are drawn inverted, cards that cannot be
+ * played are dimmed, and trumps carry a solid bar along the bottom edge.
  */
 @Composable
 fun CardTile(
@@ -207,12 +233,18 @@ fun CardTile(
     val colors = LightThemeTokens.colors
     val frame = if (dimmed) colors.contentSecondary else colors.content
     val shape = RoundedCornerShape(CARD_CORNER_UNITS.gridUnitsAsDp())
+    val tileBackground = if (selected) colors.content else colors.background
+    val textColor = when {
+        card != null && card.suit.isRed -> suitRed(tileBackground).let { if (dimmed && !selected) it.copy(alpha = 0.5f) else it }
+        selected -> colors.background
+        else -> null
+    }
     Box(
         modifier = modifier
             .height(CARD_HEIGHT_UNITS.gridUnitsAsDp())
             .clip(shape)
             .let { if (card != null) it.border(1.5.dp, frame, shape) else it }
-            .background(if (selected) colors.content else colors.background)
+            .background(tileBackground)
             .let { if (onClick != null) it.lightClickable(onClick = onClick) else it },
         contentAlignment = Alignment.Center,
     ) {
@@ -222,7 +254,7 @@ fun CardTile(
                 variant = variant,
                 align = TextAlign.Center,
                 lighten = dimmed && !selected,
-                color = if (selected) colors.background else null,
+                color = textColor,
                 maxLines = 1,
             )
             if (trump) {
@@ -238,7 +270,10 @@ fun CardTile(
     }
 }
 
-/** The hand in rows of [CARDS_PER_ROW] tiles. */
+/**
+ * The hand in rows of [CARDS_PER_ROW] tiles. A hand that fits in one row still takes the
+ * room of [MIN_HAND_ROWS] rows, with the cards in the upper one, so the row stays where it was.
+ */
 @Composable
 fun HandView(
     cards: List<Card>,
@@ -252,7 +287,10 @@ fun HandView(
             .fillMaxWidth()
             .padding(horizontal = 0.5f.gridUnitsAsDp()),
     ) {
-        for (row in cards.chunked(CARDS_PER_ROW)) {
+        val rows = cards.chunked(CARDS_PER_ROW).let { r ->
+            if (r.isEmpty()) r else r + List((MIN_HAND_ROWS - r.size).coerceAtLeast(0)) { emptyList() }
+        }
+        for (row in rows) {
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 0.25f.gridUnitsAsDp())) {
                 for (i in 0 until CARDS_PER_ROW) {
                     val card = row.getOrNull(i)
