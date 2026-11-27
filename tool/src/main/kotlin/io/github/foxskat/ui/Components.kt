@@ -50,8 +50,11 @@ import io.github.foxskat.core.Suit
 /** Height of one row in lists, in LP3 grid units. */
 const val LIST_ROW_UNITS = 4f
 
-/** Cards per row in the hand; twelve cards (after picking up the Skat) fill two rows. */
-const val CARDS_PER_ROW = 6
+/** Cards per row in the hand: ten cards fill two even rows of five. */
+const val CARDS_PER_ROW = 5
+
+/** Cards per row while holding the Skat: twelve cards fill two even rows of six. */
+const val CARDS_PER_ROW_WITH_SKAT = 6
 
 /**
  * Variation selector that asks for the plain text glyph of a suit symbol instead of the wide
@@ -271,7 +274,7 @@ fun CardTile(
 }
 
 /**
- * The hand in rows of [CARDS_PER_ROW] tiles. A hand that fits in one row still takes the
+ * The hand in rows of [CARDS_PER_ROW] tiles, or [CARDS_PER_ROW_WITH_SKAT] while it holds the Skat. A hand that fits in one row still takes the
  * room of [MIN_HAND_ROWS] rows, with the cards in the upper one, so the row stays where it was.
  */
 @Composable
@@ -287,12 +290,13 @@ fun HandView(
             .fillMaxWidth()
             .padding(horizontal = 0.5f.gridUnitsAsDp()),
     ) {
-        val rows = cards.chunked(CARDS_PER_ROW).let { r ->
+        val perRow = if (cards.size > 2 * CARDS_PER_ROW) CARDS_PER_ROW_WITH_SKAT else CARDS_PER_ROW
+        val rows = cards.chunked(perRow).let { r ->
             if (r.isEmpty()) r else r + List((MIN_HAND_ROWS - r.size).coerceAtLeast(0)) { emptyList() }
         }
         for (row in rows) {
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 0.25f.gridUnitsAsDp())) {
-                for (i in 0 until CARDS_PER_ROW) {
+                for (i in 0 until perRow) {
                     val card = row.getOrNull(i)
                     CardTile(
                         card = card,
