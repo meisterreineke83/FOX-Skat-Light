@@ -20,6 +20,7 @@ import com.thelightphone.sdk.ui.LightBottomBarItem
 import com.thelightphone.sdk.ui.LightScrollView
 import com.thelightphone.sdk.ui.LightText
 import com.thelightphone.sdk.ui.LightTextVariant
+import com.thelightphone.sdk.ui.LightThemeTokens
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import io.github.foxskat.core.Card
 import io.github.foxskat.core.CardOrder
@@ -241,6 +242,8 @@ class GameScreen(sealedActivity: SealedLightActivity) :
                         label = label,
                         value = if (enough) "$value" else "$value · zu wenig",
                         enabled = allowed,
+                        labelColor = trump?.takeIf { it.isRed && contract.kind == GameKind.FARBE }
+                            ?.let { suitRed(LightThemeTokens.colors.background) },
                         onClick = { viewModel.declare(contract) },
                     )
                 }
