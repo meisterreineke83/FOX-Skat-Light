@@ -50,8 +50,8 @@ import io.github.foxskat.core.Suit
 /** Height of one row in lists, in LP3 grid units. */
 const val LIST_ROW_UNITS = 4f
 
-/** Cards per row in the hand; twelve cards (after picking up the Skat) fill two rows. */
-const val CARDS_PER_ROW = 6
+/** Cards per row in the hand; ten cards fill two even rows, twelve (after picking up the Skat) three. */
+const val CARDS_PER_ROW = 5
 
 /**
  * Variation selector that asks for the plain text glyph of a suit symbol instead of the wide
